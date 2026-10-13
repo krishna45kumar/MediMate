@@ -42,6 +42,7 @@ function Sidebar() {
 
     return (
         <div>
+
             {/* Logo */}
             <div className="flex items-center gap-3 mb-10">
                 <div className="bg-blue-600 p-3 rounded-xl">
@@ -58,8 +59,42 @@ function Sidebar() {
                     </p>
                 </div>
             </div>
-   </div>
-        
+
+            {/* Menu heading */}
+            <p className="text-xs font-semibold text-slate-400 mb-4">
+                MAIN MENU
+            </p>
+
+            {/* Navigation links */}
+            <nav className="flex flex-col gap-2">
+
+                {menuItems.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                        <NavLink
+                            key={item.path}
+                            to={item.path}
+                            className={({ isActive }) =>
+                                `flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                                    isActive
+                                        ? "bg-blue-50 text-blue-600 font-semibold"
+                                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                                }`
+                            }
+                        >
+                            <Icon size={20} />
+                            <span>{item.name}</span>
+                        </NavLink>
+                    );
+                })}
+
+            </nav>
+
+         
+         
+
+        </div>
     );
 }
 
