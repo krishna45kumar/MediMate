@@ -1,5 +1,5 @@
-
 import { NavLink } from "react-router-dom";
+
 
 import {
     Pill,
@@ -41,7 +41,7 @@ function Sidebar() {
     ];
 
     return (
-        <div>
+        <aside className="w-64 min-h-screen bg-white border-r border-slate-200 p-5 flex flex-col">
 
             {/* Logo */}
             <div className="flex items-center gap-3 mb-10">
@@ -91,10 +91,29 @@ function Sidebar() {
 
             </nav>
 
-         
-         
+            {/* Bottom menu */}
+            <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col gap-2">
 
-        </div>
+                <button
+                    type="button"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50"
+                >
+                    <Settings size={20} />
+                    <span>Settings</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => window.location.assign("/")}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50"
+                >
+                    <LogOut size={20} />
+                    <span>Logout</span>
+                </button>
+
+            </div>
+
+        </aside>
     );
 }
 
