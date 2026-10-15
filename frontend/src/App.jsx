@@ -1,41 +1,39 @@
-import {
-    BrowserRouter,
-    Routes,
-    Route
-} from "react-router-dom";
+
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Medicines from "./pages/Medicines";
+import DashboardLayout from "./components/DashboardLayout";
 
 function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Login page - without Sidebar */}
+        <Route path="/" element={<Login />} />
 
-    return (
+        {/* Pages with common Sidebar */}
+        <Route
+          path="/dashboard"
+          element={
+            <DashboardLayout>
+              <Dashboard />
+            </DashboardLayout>
+          }
+        />
 
-        <BrowserRouter>
-
-            <Routes>
-
-                <Route
-                    path="/"
-                    element={<Login />}
-                />
-
-                <Route
-                    path="/dashboard"
-                    element={<Dashboard />}
-                />
-
-                <Route
-                    path="/medicines"
-                    element={<Medicines />}
-                />
-
-            </Routes>
-
-        </BrowserRouter>
-
-    );
+        <Route
+          path="/medicines"
+          element={
+            <DashboardLayout>
+              <Medicines />
+            </DashboardLayout>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
