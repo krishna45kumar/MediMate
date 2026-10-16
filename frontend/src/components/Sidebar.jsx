@@ -51,7 +51,7 @@ function Sidebar() {
 
                 <div>
                     <h1 className="text-lg font-bold text-slate-800">
-                        MediMate <span className="text-blue-600">AI</span>
+                        Medi <span className="text-blue-600">Mate</span>
                     </h1>
 
                     <p className="text-xs text-slate-500">
