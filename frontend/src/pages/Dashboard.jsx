@@ -1,4 +1,4 @@
-
+import { useState } from "react";
 import {
   Pill,
   CalendarCheck,
@@ -10,7 +10,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-function Dashboard() {
+function Dashboard() { 
+  const [takenDoses, setTakenDoses] = useState([true, false, false]);
   const summaryCards = [
     {
       title: "Total Medicines",
@@ -28,7 +29,7 @@ function Dashboard() {
     },
     {
       title: "Completed Doses",
-      value: "2 / 6",
+     value: `${takenDoses.filter(Boolean).length} / 3`,
       subtitle: "Doses taken today",
       icon: CheckCircle2,
       color: "bg-green-100 text-green-600",
@@ -135,40 +136,49 @@ function Dashboard() {
         </div>
 
         <div className="space-y-4">
-          {schedule.map((item) => {
-            const Icon = item.icon;
+         {schedule.map((item, index) => {
+  const Icon = item.icon;
+  const isTaken = takenDoses[index];
 
-            return (
-              <div
-                key={item.period}
-                className="flex items-center gap-4 p-4 rounded-xl bg-slate-50"
-              >
-                <div className={`p-3 rounded-xl ${item.color}`}>
-                  <Icon size={22} />
-                </div>
+  return (
+    <div
+      key={item.period}
+      className="flex items-center gap-4 p-4 rounded-xl bg-slate-50"
+    >
+      <div className={`p-3 rounded-xl ${item.color}`}>
+        <Icon size={22} />
+      </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-800">
-                    {item.medicine}
-                  </p>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-slate-800">
+          {item.medicine}
+        </p>
 
-                  <p className="text-sm text-slate-500 mt-1">
-                    {item.period} · {item.dose} · {item.time}
-                  </p>
-                </div>
+        <p className="text-sm text-slate-500 mt-1">
+          {item.period} · {item.dose} · {item.time}
+        </p>
+      </div>
 
-                <span
-                  className={`text-xs font-semibold px-3 py-2 rounded-full ${
-                    item.status === "Taken"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-blue-100 text-blue-700"
-                  }`}
-                >
-                  {item.status}
-                </span>
-              </div>
-            );
-          })}
+      <button
+        type="button"
+        onClick={() => {
+          setTakenDoses((previous) =>
+            previous.map((taken, i) =>
+              i === index ? !taken : taken
+            )
+          );
+        }}
+        className={`text-xs font-semibold px-3 py-2 rounded-full ${
+          isTaken
+            ? "bg-green-100 text-green-700"
+            : "bg-blue-100 text-blue-700"
+        }`}
+      >
+        {isTaken ? "Taken ✓" : "Mark as Taken"}
+      </button>
+    </div>
+  );
+})}
         </div>
       </section>
     </div>
