@@ -1,7 +1,6 @@
 
 import { useState } from "react";
-import { Pill, Plus, Search, X } from "lucide-react";
-
+import { Pill, Plus, Search, X, Trash2 } from "lucide-react";
 function Medicines() {
   const [medicines, setMedicines] = useState([]);
   const [search, setSearch] = useState("");
@@ -42,6 +41,14 @@ function Medicines() {
 
     setShowForm(false);
   }
+
+  
+function handleDelete(id) {
+  setMedicines((previous) =>
+    previous.filter((medicine) => medicine.id !== id)
+  );
+}
+
 
   const filteredMedicines = medicines.filter((medicine) =>
     medicine.name.toLowerCase().includes(search.toLowerCase())
@@ -191,6 +198,7 @@ function Medicines() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredMedicines.map((medicine) => (
+
             <div
               key={medicine.id}
               className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm"
@@ -213,6 +221,19 @@ function Medicines() {
               <p className="text-sm text-slate-500 mt-4">
                 Reminder: {medicine.time}
               </p>
+
+              
+<div className="flex justify-end mt-4">
+  <button
+    type="button"
+    onClick={() => handleDelete(medicine.id)}
+    className="flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition"
+  >
+    <Trash2 size={16} />
+    Delete
+  </button>
+</div>
+
             </div>
           ))}
         </div>
