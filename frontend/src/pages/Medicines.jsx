@@ -1,8 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pill, Plus, Search, X, Trash2 } from "lucide-react";
 function Medicines() {
-  const [medicines, setMedicines] = useState([]);
+
+  const [medicines, setMedicines] = useState(() => {
+  const savedMedicines = localStorage.getItem("medicines");
+
+  return savedMedicines ? JSON.parse(savedMedicines) : [];
+});
+
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
 
@@ -11,6 +17,10 @@ function Medicines() {
     dosage: "",
     time: "",
   });
+    
+  useEffect(() => {
+  localStorage.setItem("medicines", JSON.stringify(medicines));
+}, [medicines]);
 
   function handleChange(e) {
     const { name, value } = e.target;
