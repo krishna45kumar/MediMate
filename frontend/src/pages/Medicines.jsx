@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Pill, Plus, Search, X, Trash2 } from "lucide-react";
+import { Pill, Plus, Search, X, Trash2, Pencil } from "lucide-react";
 function Medicines() {
 
   const [medicines, setMedicines] = useState(() => {
@@ -11,6 +11,7 @@ function Medicines() {
 
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -31,26 +32,46 @@ function Medicines() {
     }));
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  
+function handleSubmit(e) {
+  e.preventDefault();
 
+  const medicineData = {
+    name: formData.name.trim(),
+    dosage: formData.dosage.trim(),
+    time: formData.time,
+  };
+
+  if (editingId !== null) {
+    // Existing medicine update hogi
+    setMedicines((previous) =>
+      previous.map((medicine) =>
+        medicine.id === editingId
+          ? { ...medicine, ...medicineData }
+          : medicine
+      )
+    );
+  } else {
+    // Nayi medicine add hogi
     const newMedicine = {
       id: Date.now(),
-      name: formData.name.trim(),
-      dosage: formData.dosage.trim(),
-      time: formData.time,
+      ...medicineData,
     };
 
     setMedicines((previous) => [...previous, newMedicine]);
-
-    setFormData({
-      name: "",
-      dosage: "",
-      time: "",
-    });
-
-    setShowForm(false);
   }
+
+  // Form reset
+  setFormData({
+    name: "",
+    dosage: "",
+    time: "",
+  });
+
+  setEditingId(null);
+  setShowForm(false);
+}
+
 
   
 function handleDelete(id) {
@@ -58,6 +79,19 @@ function handleDelete(id) {
     previous.filter((medicine) => medicine.id !== id)
   );
 }
+
+
+function handleEdit(medicine) {
+  setFormData({
+    name: medicine.name,
+    dosage: medicine.dosage,
+    time: medicine.time,
+  });
+
+  setEditingId(medicine.id);
+  setShowForm(true);
+}
+
 
 
   const filteredMedicines = medicines.filter((medicine) =>
@@ -153,7 +187,7 @@ function handleDelete(id) {
                 type="submit"
                 className="bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700"
               >
-                Save Medicine
+              {editingId !== null ? "Update Medicine" : "Save Medicine"}
               </button>
 
               <button
@@ -233,7 +267,17 @@ function handleDelete(id) {
               </p>
 
               
-<div className="flex justify-end mt-4">
+
+<div className="flex justify-end gap-2 mt-4">
+  <button
+    type="button"
+    onClick={() => handleEdit(medicine)}
+    className="flex items-center gap-2 text-sm text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition"
+  >
+    <Pencil size={16} />
+    Edit
+  </button>
+
   <button
     type="button"
     onClick={() => handleDelete(medicine.id)}
@@ -243,6 +287,7 @@ function handleDelete(id) {
     Delete
   </button>
 </div>
+
 
             </div>
           ))}
