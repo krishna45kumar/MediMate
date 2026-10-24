@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Pill,
   CalendarCheck,
@@ -11,11 +11,33 @@ import {
 } from "lucide-react";
 
 function Dashboard() { 
+
+  const [medicines, setMedicines] = useState([]);
+
+useEffect(() => {
+  function loadMedicines() {
+    const savedMedicines = localStorage.getItem("medicines");
+
+    setMedicines(savedMedicines ? JSON.parse(savedMedicines) : []);
+  }
+
+  loadMedicines();
+
+  window.addEventListener("focus", loadMedicines);
+
+  return () => {
+    window.removeEventListener("focus", loadMedicines);
+  };
+}, []);
+
+const todaySchedule = medicines;
+
+
   const [takenDoses, setTakenDoses] = useState([true, false, false]);
   const summaryCards = [
     {
       title: "Total Medicines",
-      value: "4",
+     value: medicines.length,
       subtitle: "Medicines in your list",
       icon: Pill,
       color: "bg-blue-100 text-blue-600",
@@ -36,35 +58,7 @@ function Dashboard() {
     },
   ];
 
-  const schedule = [
-    {
-      time: "08:00 AM",
-      period: "Morning",
-      medicine: "Vitamin D",
-      dose: "1 tablet",
-      icon: Sun,
-      color: "bg-amber-100 text-amber-600",
-      status: "Taken",
-    },
-    {
-      time: "01:00 PM",
-      period: "Afternoon",
-      medicine: "Medicine B",
-      dose: "1 tablet",
-      icon: Sunset,
-      color: "bg-orange-100 text-orange-600",
-      status: "Upcoming",
-    },
-    {
-      time: "09:00 PM",
-      period: "Night",
-      medicine: "Medicine C",
-      dose: "1 tablet",
-      icon: Moon,
-      color: "bg-indigo-100 text-indigo-600",
-      status: "Upcoming",
-    },
-  ];
+  
 
   return (
     <div className="space-y-8">
@@ -134,52 +128,36 @@ function Dashboard() {
 
           <CalendarCheck className="text-blue-600" size={25} />
         </div>
-
-        <div className="space-y-4">
-         {schedule.map((item, index) => {
-  const Icon = item.icon;
-  const isTaken = takenDoses[index];
-
-  return (
-    <div
-      key={item.period}
-      className="flex items-center gap-4 p-4 rounded-xl bg-slate-50"
-    >
-      <div className={`p-3 rounded-xl ${item.color}`}>
-        <Icon size={22} />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-slate-800">
-          {item.medicine}
-        </p>
-
-        <p className="text-sm text-slate-500 mt-1">
-          {item.period} · {item.dose} · {item.time}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          setTakenDoses((previous) =>
-            previous.map((taken, i) =>
-              i === index ? !taken : taken
-            )
-          );
-        }}
-        className={`text-xs font-semibold px-3 py-2 rounded-full ${
-          isTaken
-            ? "bg-green-100 text-green-700"
-            : "bg-blue-100 text-blue-700"
-        }`}
+        
+<div className="space-y-4">
+  {todaySchedule.length === 0 ? (
+    <p className="text-slate-500">
+      No medicines added yet. Add a medicine to see it here.
+    </p>
+  ) : (
+    todaySchedule.map((medicine, index) => (
+      <div
+        key={medicine.id ?? index}
+        className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4"
       >
-        {isTaken ? "Taken ✓" : "Mark as Taken"}
-      </button>
-    </div>
-  );
-})}
+        <div className="min-w-0">
+          <h3 className="font-semibold text-slate-800">
+            {medicine.name}
+          </h3>
+
+          <p className="text-sm text-slate-500 mt-1">
+            {medicine.dosage}
+          </p>
         </div>
+
+        <span className="shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-600">
+          {medicine.time}
+        </span>
+      </div>
+    ))
+  )}
+</div>
+
       </section>
     </div>
   );

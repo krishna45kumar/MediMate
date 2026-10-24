@@ -74,11 +74,19 @@ function handleSubmit(e) {
 
 
   
+
 function handleDelete(id) {
-  setMedicines((previous) =>
-    previous.filter((medicine) => medicine.id !== id)
+  const confirmDelete = window.confirm(
+    "Delete this medicine?"
   );
+
+  if (confirmDelete) {
+    setMedicines((previous) =>
+      previous.filter((medicine) => medicine.id !== id)
+    );
+  }
 }
+
 
 
 function handleEdit(medicine) {
