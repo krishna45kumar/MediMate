@@ -13,6 +13,10 @@ import {
 function Dashboard() { 
 
   const [medicines, setMedicines] = useState([]);
+  const [takenDoses, setTakenDoses] = useState(() => {
+  const saved = localStorage.getItem("takenDoses");
+  return saved ? JSON.parse(saved) : [];
+});
 
 useEffect(() => {
   function loadMedicines() {
@@ -30,10 +34,16 @@ useEffect(() => {
   };
 }, []);
 
+
 const todaySchedule = medicines;
+const completedDoses = todaySchedule.filter((medicine) =>
+  takenDoses.includes(medicine.id)
+).length;
 
+useEffect(() => {
+  localStorage.setItem("takenDoses", JSON.stringify(takenDoses));
+}, [takenDoses]);
 
-  const [takenDoses, setTakenDoses] = useState([true, false, false]);
   const summaryCards = [
     {
       title: "Total Medicines",
@@ -44,14 +54,14 @@ const todaySchedule = medicines;
     },
     {
       title: "Today's Doses",
-      value: "6",
+      value: todaySchedule.length,
       subtitle: "Scheduled for today",
       icon: CalendarCheck,
       color: "bg-purple-100 text-purple-600",
     },
     {
       title: "Completed Doses",
-     value: `${takenDoses.filter(Boolean).length} / 3`,
+     value: completedDoses,
       subtitle: "Doses taken today",
       icon: CheckCircle2,
       color: "bg-green-100 text-green-600",
@@ -81,7 +91,7 @@ const todaySchedule = medicines;
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {summaryCards.map((card) => {
           const Icon = card.icon;
-
+ 
           return (
             <div
               key={card.title}
@@ -153,6 +163,25 @@ const todaySchedule = medicines;
         <span className="shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-600">
           {medicine.time}
         </span>
+          <button
+  type="button"
+  onClick={() => {
+    setTakenDoses((previous) =>
+      previous.includes(medicine.id)
+        ? previous.filter((id) => id !== medicine.id)
+        : [...previous, medicine.id]
+    );
+  }}
+  className={`mt-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+    takenDoses.includes(medicine.id)
+      ? "bg-green-100 text-green-700"
+      : "bg-blue-600 text-white hover:bg-blue-700"
+  }`}
+>
+  {takenDoses.includes(medicine.id)
+    ? "✓ Dose Taken"
+    : "Mark as Taken"}
+</button>
       </div>
     ))
   )}
