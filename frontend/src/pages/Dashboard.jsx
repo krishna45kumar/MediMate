@@ -10,13 +10,51 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+
+
+function getTodayDate() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function Dashboard() { 
 
   const [medicines, setMedicines] = useState([]);
-  const [takenDoses, setTakenDoses] = useState(() => {
-  const saved = localStorage.getItem("takenDoses");
-  return saved ? JSON.parse(saved) : [];
-});
+const [todayDate, setTodayDate] = useState(getTodayDate);
+
+const [takenDoses, setTakenDoses] = useState(() => {
+  const savedDate = localStorage.getItem("doseTrackingDate");
+  const savedDoses = localStorage.getItem("takenDoses");
+
+  if (savedDate === getTodayDate() && savedDoses) {
+    return JSON.parse(savedDoses);
+  }
+
+  return [];
+}); 
+
+useEffect(() => {
+  function checkDate() {
+    const currentDate = getTodayDate();
+
+    if (currentDate !== todayDate) {
+      setTodayDate(currentDate);
+      setTakenDoses([]);
+    }
+  }
+
+  checkDate();
+
+  const intervalId = setInterval(checkDate, 30000);
+
+  return () => clearInterval(intervalId);
+}, [todayDate]);
+
 
 useEffect(() => {
   function loadMedicines() {
@@ -40,9 +78,12 @@ const completedDoses = todaySchedule.filter((medicine) =>
   takenDoses.includes(medicine.id)
 ).length;
 
+
 useEffect(() => {
+  localStorage.setItem("doseTrackingDate", todayDate);
   localStorage.setItem("takenDoses", JSON.stringify(takenDoses));
-}, [takenDoses]);
+}, [takenDoses, todayDate]);
+
 
   const summaryCards = [
     {
@@ -75,7 +116,12 @@ useEffect(() => {
       {/* Welcome header */}
       <div>
         <p className="text-sm text-blue-600 font-medium">
-          Tuesday, October 13, 2026
+         {new Date().toLocaleDateString("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+})}
         </p>
 
         <h1 className="text-3xl font-bold text-slate-800 mt-2">
