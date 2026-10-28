@@ -22,6 +22,41 @@ function getTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
+
+
+function getDosePeriod(time) {
+  if (!time) return "Other";
+
+  const value = String(time).trim().toLowerCase();
+
+  // Agar time Morning, Afternoon ya Night format mein hai
+  if (value.includes("morning")) return "Morning";
+  if (value.includes("afternoon")) return "Afternoon";
+  if (value.includes("night") || value.includes("evening")) {
+    return "Night";
+  }
+
+  // Agar time 08:00 AM ya 02:00 PM format mein hai
+  const match = value.match(
+    /^(\d{1,2})(?::\d{2})?\s*(am|pm)?$/
+  );
+
+  if (!match) return "Other";
+
+  let hour = Number(match[1]);
+  const meridiem = match[2];
+
+  if (meridiem === "am" && hour === 12) hour = 0;
+  if (meridiem === "pm" && hour !== 12) hour += 12;
+
+  if (hour >= 5 && hour < 12) return "Morning";
+  if (hour >= 12 && hour < 17) return "Afternoon";
+  if (hour >= 17 || hour < 5) return "Night";
+
+  return "Other";
+}
+
+
 function Dashboard() { 
 
   const [medicines, setMedicines] = useState([]);
@@ -74,6 +109,23 @@ useEffect(() => {
 
 
 const todaySchedule = medicines;
+
+const doseGroups = {
+  Morning: todaySchedule.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Morning"
+  ),
+  Afternoon: todaySchedule.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Afternoon"
+  ),
+  Night: todaySchedule.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Night"
+  ),
+  Other: todaySchedule.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Other"
+  ),
+};
+
+
 const completedDoses = todaySchedule.filter((medicine) =>
   takenDoses.includes(medicine.id)
 ).length;
@@ -185,53 +237,73 @@ useEffect(() => {
           <CalendarCheck className="text-blue-600" size={25} />
         </div>
         
-<div className="space-y-4">
+
+<div className="space-y-6">
   {todaySchedule.length === 0 ? (
     <p className="text-slate-500">
       No medicines added yet. Add a medicine to see it here.
     </p>
   ) : (
-    todaySchedule.map((medicine, index) => (
-      <div
-        key={medicine.id ?? index}
-        className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4"
-      >
-        <div className="min-w-0">
-          <h3 className="font-semibold text-slate-800">
-            {medicine.name}
+    Object.entries(doseGroups)
+      .filter(([period, groupMedicines]) => groupMedicines.length > 0)
+      .map(([period, groupMedicines]) => (
+        <div key={period}>
+          <h3 className="mb-3 text-lg font-semibold text-slate-800">
+            {period === "Morning" && "☀️ Morning Doses"}
+            {period === "Afternoon" && "🌤️ Afternoon Doses"}
+            {period === "Night" && "🌙 Night Doses"}
+            {period === "Other" && "💊 Other Doses"}
           </h3>
 
-          <p className="text-sm text-slate-500 mt-1">
-            {medicine.dosage}
-          </p>
-        </div>
+          <div className="space-y-3">
+            {groupMedicines.map((medicine, index) => {
+              const isTaken = takenDoses.includes(medicine.id);
 
-        <span className="shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-600">
-          {medicine.time}
-        </span>
-          <button
-  type="button"
-  onClick={() => {
-    setTakenDoses((previous) =>
-      previous.includes(medicine.id)
-        ? previous.filter((id) => id !== medicine.id)
-        : [...previous, medicine.id]
-    );
-  }}
-  className={`mt-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-    takenDoses.includes(medicine.id)
-      ? "bg-green-100 text-green-700"
-      : "bg-blue-600 text-white hover:bg-blue-700"
-  }`}
->
-  {takenDoses.includes(medicine.id)
-    ? "✓ Dose Taken"
-    : "Mark as Taken"}
-</button>
-      </div>
-    ))
+              return (
+                <div
+                  key={medicine.id ?? index}
+                  className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <h4 className="font-semibold text-slate-800">
+                      {medicine.name}
+                    </h4>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {medicine.dosage}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Time: {medicine.time}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTakenDoses((previous) =>
+                        previous.includes(medicine.id)
+                          ? previous.filter((id) => id !== medicine.id)
+                          : [...previous, medicine.id]
+                      );
+                    }}
+                    className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      isTaken
+                        ? "bg-green-100 text-green-700"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {isTaken ? "✓ Dose Taken" : "Mark as Taken"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))
   )}
 </div>
+
 
       </section>
     </div>
