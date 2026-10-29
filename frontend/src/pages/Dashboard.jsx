@@ -130,6 +130,11 @@ const completedDoses = todaySchedule.filter((medicine) =>
   takenDoses.includes(medicine.id)
 ).length;
 
+const progressPercentage =
+  todaySchedule.length === 0
+    ? 0
+    : Math.round((completedDoses / todaySchedule.length) * 100);
+
 
 useEffect(() => {
   localStorage.setItem("doseTrackingDate", todayDate);
@@ -221,6 +226,40 @@ useEffect(() => {
         })}
       </div>
 
+      
+{/* Today's Progress */}
+<div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+  <div className="mb-3 flex items-center justify-between gap-3">
+    <div>
+      <h2 className="text-lg font-bold text-slate-800">
+        Today's Progress
+      </h2>
+      <p className="mt-1 text-sm text-slate-500">
+        {completedDoses} of {todaySchedule.length} doses completed
+      </p>
+    </div>
+
+    <span className="text-lg font-bold text-blue-600">
+      {progressPercentage}%
+    </span>
+  </div>
+
+  <div
+    className="h-3 w-full overflow-hidden rounded-full bg-slate-100"
+    role="progressbar"
+    aria-valuenow={progressPercentage}
+    aria-valuemin={0}
+    aria-valuemax={100}
+    aria-label="Today's dose completion progress"
+  >
+    <div
+      className="h-full rounded-full bg-blue-600 transition-all duration-300"
+      style={{ width: `${progressPercentage}%` }}
+    />
+  </div>
+</div>
+
+
       {/* Today's schedule */}
       <section className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
@@ -276,6 +315,17 @@ useEffect(() => {
                     <p className="mt-1 text-sm text-slate-500">
                       Time: {medicine.time}
                     </p>
+                    
+<span
+  className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+    isTaken
+      ? "bg-green-100 text-green-700"
+      : "bg-amber-100 text-amber-700"
+  }`}
+>
+  {isTaken ? "✓ Taken" : "● Pending"}
+</span>
+
                   </div>
 
                   <button
