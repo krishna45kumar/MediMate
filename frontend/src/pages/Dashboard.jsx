@@ -108,6 +108,141 @@ useEffect(() => {
 }, []);
 
 
+useEffect(() => {
+  let intervalId;
+  let isActive = true;
+
+  async function startReminders() {
+    if (!("Notification" in window)) {
+      console.log("Notifications supported nahi hain.");
+      return;
+    }
+
+    let permission = Notification.permission;
+
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+
+    if (!isActive || permission !== "granted") {
+      console.log("Notification permission:", permission);
+      return;
+    }
+
+    function checkReminders() {
+      const now = new Date();
+
+      const currentTime =
+        String(now.getHours()).padStart(2, "0") +
+        ":" +
+        String(now.getMinutes()).padStart(2, "0");
+
+      const storageKey = `notifiedReminders-${getTodayDate()}`;
+
+      let notifiedKeys = [];
+
+      try {
+        notifiedKeys = JSON.parse(
+          localStorage.getItem(storageKey) || "[]"
+        );
+      } catch {
+        notifiedKeys = [];
+      }
+
+      medicines.forEach((medicine) => {
+        if (!medicine.time || medicine.id == null) return;
+
+        const medicineId = String(medicine.id);
+
+        // Medicine ID + time milkar unique reminder key banayenge
+        const reminderKey = `${medicineId}-${medicine.time}`;
+
+        console.log(
+          "Reminder check:",
+          medicine.name,
+          "Medicine time:",
+          medicine.time,
+          "Current time:",
+          currentTime
+        );
+
+        const [medicineHour, medicineMinute] =
+          medicine.time.split(":").map(Number);
+
+        if (
+          Number.isNaN(medicineHour) ||
+          Number.isNaN(medicineMinute)
+        ) {
+          console.log("Invalid medicine time:", medicine.time);
+          return;
+        }
+
+        const medicineDate = new Date();
+        medicineDate.setHours(
+          medicineHour,
+          medicineMinute,
+          0,
+          0
+        );
+
+        const currentDate = new Date();
+
+        if (
+          currentDate >= medicineDate &&
+          !takenDoses.some((id) => String(id) === medicineId) &&
+          !notifiedKeys.includes(reminderKey)
+        ) {
+          try {
+            const notification = new Notification(
+              "MediMate - Medicine Reminder",
+              {
+                body: `Time to take ${medicine.name} (${medicine.dosage})`,
+              }
+            );
+
+            notifiedKeys.push(reminderKey);
+
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify(notifiedKeys)
+            );
+
+            console.log(
+              "Medicine notification created:",
+              medicine.name,
+              medicine.time
+            );
+
+            notification.onshow = () => {
+              console.log(
+                "Medicine notification displayed:",
+                medicine.name
+              );
+            };
+          } catch (error) {
+            console.error(
+              "Notification creation failed:",
+              error
+            );
+          }
+        }
+      });
+    }
+
+    checkReminders();
+    intervalId = setInterval(checkReminders, 10000);
+  }
+
+  startReminders();
+
+  return () => {
+    isActive = false;
+    if (intervalId) clearInterval(intervalId);
+  };
+}, [medicines, takenDoses]);
+
+
+
 const todaySchedule = medicines;
 
 const doseGroups = {
