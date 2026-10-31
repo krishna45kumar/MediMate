@@ -62,16 +62,25 @@ function Dashboard() {
   const [medicines, setMedicines] = useState([]);
 const [todayDate, setTodayDate] = useState(getTodayDate);
 
+
 const [takenDoses, setTakenDoses] = useState(() => {
-  const savedDate = localStorage.getItem("doseTrackingDate");
-  const savedDoses = localStorage.getItem("takenDoses");
+  try {
+    const savedDate = localStorage.getItem("doseTrackingDate");
+    const savedDoses = localStorage.getItem("takenDoses");
 
-  if (savedDate === getTodayDate() && savedDoses) {
-    return JSON.parse(savedDoses);
+    if (savedDate === getTodayDate() && savedDoses) {
+      const parsedDoses = JSON.parse(savedDoses);
+
+      return Array.isArray(parsedDoses) ? parsedDoses : [];
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error loading taken doses:", error);
+    return [];
   }
+});
 
-  return [];
-}); 
 
 useEffect(() => {
   function checkDate() {
@@ -108,20 +117,26 @@ useEffect(() => {
 }, []);
 
 
+
 useEffect(() => {
   let intervalId;
   let isActive = true;
 
   async function startReminders() {
     if (!("Notification" in window)) {
-      console.log("Notifications supported nahi hain.");
+      console.log("Browser notifications are not supported.");
       return;
     }
 
     let permission = Notification.permission;
 
     if (permission === "default") {
-      permission = await Notification.requestPermission();
+      try {
+        permission = await Notification.requestPermission();
+      } catch (error) {
+        console.error("Permission request failed:", error);
+        return;
+      }
     }
 
     if (!isActive || permission !== "granted") {
@@ -130,8 +145,9 @@ useEffect(() => {
     }
 
     function checkReminders() {
-      const now = new Date();
+      if (!isActive) return;
 
+      const now = new Date();
       const currentTime =
         String(now.getHours()).padStart(2, "0") +
         ":" +
@@ -145,88 +161,104 @@ useEffect(() => {
         notifiedKeys = JSON.parse(
           localStorage.getItem(storageKey) || "[]"
         );
+
+        if (!Array.isArray(notifiedKeys)) {
+          notifiedKeys = [];
+        }
       } catch {
         notifiedKeys = [];
       }
 
+      let storageChanged = false;
+
       medicines.forEach((medicine) => {
         if (!medicine.time || medicine.id == null) return;
 
-        const medicineId = String(medicine.id);
-
-        // Medicine ID + time milkar unique reminder key banayenge
-        const reminderKey = `${medicineId}-${medicine.time}`;
-
-        console.log(
-          "Reminder check:",
-          medicine.name,
-          "Medicine time:",
-          medicine.time,
-          "Current time:",
-          currentTime
+        // HTML time input ka format HH:mm hota hai
+        const match = String(medicine.time).match(
+          /^([01]\d|2[0-3]):([0-5]\d)$/
         );
 
-        const [medicineHour, medicineMinute] =
-          medicine.time.split(":").map(Number);
-
-        if (
-          Number.isNaN(medicineHour) ||
-          Number.isNaN(medicineMinute)
-        ) {
-          console.log("Invalid medicine time:", medicine.time);
+        if (!match) {
+          console.warn(
+            "Invalid medicine time:",
+            medicine.name,
+            medicine.time
+          );
           return;
         }
 
-        const medicineDate = new Date();
-        medicineDate.setHours(
-          medicineHour,
-          medicineMinute,
-          0,
-          0
+        const medicineId = String(medicine.id);
+        const reminderKey = `${medicineId}-${medicine.time}`;
+
+        const alreadyTaken = takenDoses.some(
+          (id) => String(id) === medicineId
         );
 
-        const currentDate = new Date();
+        const alreadyNotified = notifiedKeys.includes(reminderKey);
 
-        if (
-          currentDate >= medicineDate &&
-          !takenDoses.some((id) => String(id) === medicineId) &&
-          !notifiedKeys.includes(reminderKey)
-        ) {
-          try {
-            const notification = new Notification(
-              "MediMate - Medicine Reminder",
-              {
-                body: `Time to take ${medicine.name} (${medicine.dosage})`,
-              }
-            );
+        const [hour, minute] = medicine.time.split(":").map(Number);
 
-            notifiedKeys.push(reminderKey);
+        const scheduledTime = new Date();
+        scheduledTime.setHours(hour, minute, 0, 0);
 
-            localStorage.setItem(
-              storageKey,
-              JSON.stringify(notifiedKeys)
-            );
+        // Scheduled time aa chuka hai ya guzar chuka hai?
+        const isDue = now >= scheduledTime;
 
+        if (alreadyTaken || alreadyNotified || !isDue) {
+          return;
+        }
+
+        try {
+          const notification = new Notification(
+            "MediMate - Medicine Reminder",
+            {
+              body: `Time to take ${medicine.name} (${medicine.dosage})`,
+              tag: reminderKey,
+            }
+          );
+
+          // Is medicine aur time ke liye sirf ek reminder
+          notifiedKeys.push(reminderKey);
+          storageChanged = true;
+
+          notification.onshow = () => {
             console.log(
-              "Medicine notification created:",
+              "Notification displayed:",
               medicine.name,
               medicine.time
             );
+          };
 
-            notification.onshow = () => {
-              console.log(
-                "Medicine notification displayed:",
-                medicine.name
-              );
-            };
-          } catch (error) {
+          notification.onerror = (event) => {
             console.error(
-              "Notification creation failed:",
-              error
+              "Notification display error:",
+              event
             );
-          }
+          };
+
+          console.log(
+            "Notification created:",
+            medicine.name,
+            "Scheduled:",
+            medicine.time,
+            "Current:",
+            currentTime
+          );
+        } catch (error) {
+          console.error(
+            "Notification creation failed:",
+            error
+          );
         }
       });
+
+      if (storageChanged) {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(notifiedKeys)
+        );
+      }
     }
 
     checkReminders();
@@ -237,14 +269,42 @@ useEffect(() => {
 
   return () => {
     isActive = false;
-    if (intervalId) clearInterval(intervalId);
+
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
   };
 }, [medicines, takenDoses]);
 
 
-
 const todaySchedule = medicines;
 
+function getMedicineStatus(medicine) {
+  const isTaken = takenDoses.some(
+    (id) => String(id) === String(medicine.id)
+  );
+
+  if (isTaken) {
+    return "Taken";
+  }
+
+  if (!medicine.time) {
+    return "Upcoming";
+  }
+
+  const now = new Date();
+
+  const [hour, minute] = medicine.time.split(":").map(Number);
+
+  const medicineTime = new Date();
+  medicineTime.setHours(hour, minute, 0, 0);
+
+  if (now > medicineTime) {
+    return "Missed";
+  }
+
+  return "Upcoming";
+}
 const doseGroups = {
   Morning: todaySchedule.filter(
     (medicine) => getDosePeriod(medicine.time) === "Morning"
@@ -271,9 +331,19 @@ const progressPercentage =
     : Math.round((completedDoses / todaySchedule.length) * 100);
 
 
+
 useEffect(() => {
-  localStorage.setItem("doseTrackingDate", todayDate);
-  localStorage.setItem("takenDoses", JSON.stringify(takenDoses));
+  try {
+    localStorage.setItem("doseTrackingDate", todayDate);
+    localStorage.setItem(
+      "takenDoses",
+      JSON.stringify(takenDoses)
+    );
+
+    console.log("Dose status saved successfully:", takenDoses);
+  } catch (error) {
+    console.error("Error saving dose status:", error);
+  }
 }, [takenDoses, todayDate]);
 
 
@@ -430,8 +500,9 @@ useEffect(() => {
           </h3>
 
           <div className="space-y-3">
-            {groupMedicines.map((medicine, index) => {
-              const isTaken = takenDoses.includes(medicine.id);
+           {groupMedicines.map((medicine, index) => {
+  const status = getMedicineStatus(medicine);
+  const isTaken = status === "Taken";
 
               return (
                 <div
@@ -453,12 +524,18 @@ useEffect(() => {
                     
 <span
   className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-    isTaken
+    status === "Taken"
       ? "bg-green-100 text-green-700"
-      : "bg-amber-100 text-amber-700"
+      : status === "Missed"
+      ? "bg-red-100 text-red-700"
+      : "bg-blue-100 text-blue-700"
   }`}
 >
-  {isTaken ? "✓ Taken" : "● Pending"}
+  {status === "Taken"
+    ? "✓ Taken"
+    : status === "Missed"
+    ? "✕ Missed"
+    : "● Upcoming"}
 </span>
 
                   </div>
