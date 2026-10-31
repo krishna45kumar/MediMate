@@ -81,6 +81,18 @@ const [takenDoses, setTakenDoses] = useState(() => {
   }
 });
 
+const [, setCurrentTime] = useState(new Date());
+
+useEffect(() => {
+  const intervalId = setInterval(() => {
+    setCurrentTime(new Date());
+  }, 10000);
+
+  return () => {
+    clearInterval(intervalId);
+  };
+}, []);
+
 
 useEffect(() => {
   function checkDate() {
@@ -325,6 +337,16 @@ const completedDoses = todaySchedule.filter((medicine) =>
   takenDoses.includes(medicine.id)
 ).length;
 
+const missedMedicines = todaySchedule.filter(
+  (medicine) => getMedicineStatus(medicine) === "Missed"
+);
+
+const missedDoses = missedMedicines.length;
+
+const upcomingMedicines = todaySchedule.filter(
+  (medicine) => getMedicineStatus(medicine) === "Upcoming"
+);
+
 const progressPercentage =
   todaySchedule.length === 0
     ? 0
@@ -369,6 +391,13 @@ useEffect(() => {
       icon: CheckCircle2,
       color: "bg-green-100 text-green-600",
     },
+    {
+  title: "Missed Doses",
+  value: missedDoses,
+  subtitle: "Doses missed today",
+  icon: Clock,
+  color: "bg-red-100 text-red-600",
+},
   ];
 
   
@@ -396,7 +425,7 @@ useEffect(() => {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         {summaryCards.map((card) => {
           const Icon = card.icon;
  
@@ -464,6 +493,142 @@ useEffect(() => {
   </div>
 </div>
 
+  
+
+{/* Missed Medicine Section */}
+{missedDoses > 0 ? (
+  <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+
+    <div className="flex items-center gap-3 mb-4">
+      <div className="rounded-xl bg-red-100 p-3">
+        <Clock className="text-red-600" size={24} />
+      </div>
+
+      <div>
+        <h2 className="font-bold text-red-700">
+          Missed Medicines
+        </h2>
+
+        <p className="text-sm text-red-600">
+          You have missed {missedDoses} dose
+          {missedDoses > 1 ? "s" : ""} today.
+        </p>
+      </div>
+    </div>
+
+    <div className="space-y-3">
+      {missedMedicines.map((medicine) => (
+        <div
+          key={medicine.id}
+          className="flex flex-col gap-3 rounded-xl border border-red-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+
+          <div>
+            <h3 className="font-semibold text-slate-800">
+              {medicine.name}
+            </h3>
+
+            <p className="text-sm text-slate-500">
+              {medicine.dosage}
+            </p>
+
+            <p className="text-sm text-slate-500">
+              Time: {medicine.time}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setTakenDoses((previous) =>
+                previous.some(
+                  (id) => String(id) === String(medicine.id)
+                )
+                  ? previous
+                  : [...previous, medicine.id]
+              );
+            }}
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+          >
+            ✓ Mark as Taken
+          </button>
+
+        </div>
+      ))}
+    </div>
+
+  </div>
+) : (
+  <div className="rounded-2xl border border-green-200 bg-green-50 p-5">
+    <div className="flex items-center gap-3">
+      <CheckCircle2 className="text-green-600" size={26} />
+
+      <div>
+        <h2 className="font-bold text-green-700">
+          Great Job!
+        </h2>
+
+        <p className="text-sm text-green-600">
+          You have no missed medicine doses today.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Upcoming Medicines Section */}
+<div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
+
+  <div className="mb-5 flex items-center gap-3">
+    <div className="rounded-xl bg-blue-100 p-3">
+      <Clock className="text-blue-600" size={24} />
+    </div>
+
+    <div>
+      <h2 className="text-lg font-bold text-slate-800">
+        Upcoming Medicines
+      </h2>
+
+      <p className="text-sm text-slate-500">
+        {upcomingMedicines.length} medicines remaining today
+      </p>
+    </div>
+  </div>
+
+  {upcomingMedicines.length === 0 ? (
+    <p className="text-sm text-slate-500">
+      No upcoming medicines for today.
+    </p>
+  ) : (
+    <div className="space-y-3">
+      {upcomingMedicines.map((medicine) => (
+        <div
+          key={medicine.id}
+          className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-4"
+        >
+          <div>
+            <h3 className="font-semibold text-slate-800">
+              {medicine.name}
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500">
+              {medicine.dosage}
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Time: {medicine.time}
+            </p>
+          </div>
+
+          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+            Upcoming
+          </span>
+        </div>
+      ))}
+    </div>
+  )}
+
+</div>
 
       {/* Today's schedule */}
       <section className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
