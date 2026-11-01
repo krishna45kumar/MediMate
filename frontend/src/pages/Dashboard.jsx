@@ -10,8 +10,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-
-
 function getTodayDate() {
   const today = new Date();
 
@@ -21,7 +19,6 @@ function getTodayDate() {
 
   return `${year}-${month}-${day}`;
 }
-
 
 
 function getDosePeriod(time) {
@@ -57,11 +54,28 @@ function getDosePeriod(time) {
 }
 
 
-function Dashboard() { 
+function Dashboard() {
 
   const [medicines, setMedicines] = useState([]);
 const [todayDate, setTodayDate] = useState(getTodayDate);
 
+
+// Search medicine
+const [searchTerm, setSearchTerm] = useState("");
+
+// Filter medicine by status
+const [statusFilter, setStatusFilter] = useState("All");
+
+// Weekly medicine history
+const [weeklyHistory, setWeeklyHistory] = useState(() => {
+  try {
+    return JSON.parse(
+      localStorage.getItem("weeklyMedicineHistory") || "{}"
+    );
+  } catch (error) {
+    return {};
+  }
+});
 
 const [takenDoses, setTakenDoses] = useState(() => {
   try {
@@ -93,7 +107,6 @@ useEffect(() => {
   };
 }, []);
 
-
 useEffect(() => {
   function checkDate() {
     const currentDate = getTodayDate();
@@ -120,13 +133,14 @@ useEffect(() => {
   }
 
   loadMedicines();
-
   window.addEventListener("focus", loadMedicines);
 
   return () => {
     window.removeEventListener("focus", loadMedicines);
   };
-}, []);
+}, []);  
+
+
 
 
 
@@ -160,25 +174,25 @@ useEffect(() => {
       if (!isActive) return;
 
       const now = new Date();
-      const currentTime =
-        String(now.getHours()).padStart(2, "0") +
-        ":" +
-        String(now.getMinutes()).padStart(2, "0");
-
       const storageKey = `notifiedReminders-${getTodayDate()}`;
 
-      let notifiedKeys = [];
+      let savedReminders = {};
 
       try {
-        notifiedKeys = JSON.parse(
-          localStorage.getItem(storageKey) || "[]"
+        savedReminders = JSON.parse(
+          localStorage.getItem(storageKey) || "{}"
         );
 
-        if (!Array.isArray(notifiedKeys)) {
-          notifiedKeys = [];
+        // Purane array format ko reset karna
+        if (
+          !savedReminders ||
+          Array.isArray(savedReminders) ||
+          typeof savedReminders !== "object"
+        ) {
+          savedReminders = {};
         }
-      } catch {
-        notifiedKeys = [];
+      } catch (error) {
+        savedReminders = {};
       }
 
       let storageChanged = false;
@@ -186,94 +200,93 @@ useEffect(() => {
       medicines.forEach((medicine) => {
         if (!medicine.time || medicine.id == null) return;
 
-        // HTML time input ka format HH:mm hota hai
+        // Check medicine time format (HH:mm)
         const match = String(medicine.time).match(
           /^([01]\d|2[0-3]):([0-5]\d)$/
         );
 
-        if (!match) {
-          console.warn(
-            "Invalid medicine time:",
-            medicine.name,
-            medicine.time
-          );
-          return;
-        }
+        if (!match) return;
 
         const medicineId = String(medicine.id);
         const reminderKey = `${medicineId}-${medicine.time}`;
 
+        // Check whether medicine is already taken
         const alreadyTaken = takenDoses.some(
           (id) => String(id) === medicineId
         );
 
-        const alreadyNotified = notifiedKeys.includes(reminderKey);
+        if (alreadyTaken) return;
+
+        // Get previous notification details
+        const reminderData = savedReminders[reminderKey] || {
+          count: 0,
+          lastSent: null,
+        };
+
+        // Maximum 2 notifications
+        if (reminderData.count >= 2) return;
 
         const [hour, minute] = medicine.time.split(":").map(Number);
 
         const scheduledTime = new Date();
         scheduledTime.setHours(hour, minute, 0, 0);
 
-        // Scheduled time aa chuka hai ya guzar chuka hai?
-        const isDue = now >= scheduledTime;
-
-        if (alreadyTaken || alreadyNotified || !isDue) {
-          return;
-        }
+        // Don't notify before scheduled time
+        if (now < scheduledTime) return;
 
         try {
-          const notification = new Notification(
-            "MediMate - Medicine Reminder",
-            {
+          // First notification
+          if (reminderData.count === 0) {
+            new Notification("MediMate - Medicine Reminder 💊", {
               body: `Time to take ${medicine.name} (${medicine.dosage})`,
-              tag: reminderKey,
-            }
-          );
+              tag: `${reminderKey}-first`,
+            });
 
-          // Is medicine aur time ke liye sirf ek reminder
-          notifiedKeys.push(reminderKey);
-          storageChanged = true;
+            savedReminders[reminderKey] = {
+              count: 1,
+              lastSent: now.getTime(),
+            };
 
-          notification.onshow = () => {
-            console.log(
-              "Notification displayed:",
-              medicine.name,
-              medicine.time
-            );
-          };
+            storageChanged = true;
 
-          notification.onerror = (event) => {
-            console.error(
-              "Notification display error:",
-              event
-            );
-          };
+            console.log("First notification sent:", medicine.name);
+          }
 
-          console.log(
-            "Notification created:",
-            medicine.name,
-            "Scheduled:",
-            medicine.time,
-            "Current:",
-            currentTime
-          );
+          // Second notification after 10 minutes
+          else if (
+            reminderData.count === 1 &&
+            now.getTime() - reminderData.lastSent >= 10 * 60 * 1000
+          ) {
+            new Notification("MediMate - Second Reminder 💊", {
+              body: `Reminder again! Please take ${medicine.name} (${medicine.dosage})`,
+              tag: `${reminderKey}-second`,
+            });
+
+            savedReminders[reminderKey] = {
+              count: 2,
+              lastSent: now.getTime(),
+            };
+
+            storageChanged = true;
+
+            console.log("Second notification sent:", medicine.name);
+          }
         } catch (error) {
-          console.error(
-            "Notification creation failed:",
-            error
-          );
+          console.error("Notification creation failed:", error);
         }
       });
 
+      // Save notification data
       if (storageChanged) {
         localStorage.setItem(
           storageKey,
-          JSON.stringify(notifiedKeys)
+          JSON.stringify(savedReminders)
         );
       }
     }
 
     checkReminders();
+
     intervalId = setInterval(checkReminders, 10000);
   }
 
@@ -289,9 +302,15 @@ useEffect(() => {
 }, [medicines, takenDoses]);
 
 
-const todaySchedule = medicines;
 
-function getMedicineStatus(medicine) {
+// Sort medicines according to scheduled time
+const todaySchedule = [...medicines].sort((a, b) => {
+  return String(a.time || "99:99").localeCompare(
+    String(b.time || "99:99")
+  );
+});
+
+  function getMedicineStatus(medicine) {
   const isTaken = takenDoses.some(
     (id) => String(id) === String(medicine.id)
   );
@@ -317,25 +336,14 @@ function getMedicineStatus(medicine) {
 
   return "Upcoming";
 }
-const doseGroups = {
-  Morning: todaySchedule.filter(
-    (medicine) => getDosePeriod(medicine.time) === "Morning"
-  ),
-  Afternoon: todaySchedule.filter(
-    (medicine) => getDosePeriod(medicine.time) === "Afternoon"
-  ),
-  Night: todaySchedule.filter(
-    (medicine) => getDosePeriod(medicine.time) === "Night"
-  ),
-  Other: todaySchedule.filter(
-    (medicine) => getDosePeriod(medicine.time) === "Other"
-  ),
-};
 
 
-const completedDoses = todaySchedule.filter((medicine) =>
+
+
+   const completedDoses = todaySchedule.filter((medicine) =>
   takenDoses.includes(medicine.id)
 ).length;
+
 
 const missedMedicines = todaySchedule.filter(
   (medicine) => getMedicineStatus(medicine) === "Missed"
@@ -347,12 +355,120 @@ const upcomingMedicines = todaySchedule.filter(
   (medicine) => getMedicineStatus(medicine) === "Upcoming"
 );
 
+// Search and status filter
+const visibleMedicines = todaySchedule.filter((medicine) => {
+  const matchesSearch = String(medicine.name || "")
+    .toLowerCase()
+    .includes(searchTerm.toLowerCase());
+
+  const matchesStatus =
+    statusFilter === "All" ||
+    getMedicineStatus(medicine) === statusFilter;
+
+  return matchesSearch && matchesStatus;
+});
+
+const doseGroups = {
+  Morning: visibleMedicines.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Morning"
+  ),
+
+  Afternoon: visibleMedicines.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Afternoon"
+  ),
+
+  Night: visibleMedicines.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Night"
+  ),
+
+  Other: visibleMedicines.filter(
+    (medicine) => getDosePeriod(medicine.time) === "Other"
+  ),
+};
+
 const progressPercentage =
   todaySchedule.length === 0
     ? 0
     : Math.round((completedDoses / todaySchedule.length) * 100);
 
 
+// Save daily medicine report
+useEffect(() => {
+  const updatedHistory = {
+    ...weeklyHistory,
+    [todayDate]: {
+      total: todaySchedule.length,
+      completed: completedDoses,
+    },
+  };
+
+  try {
+    localStorage.setItem(
+      "weeklyMedicineHistory",
+      JSON.stringify(updatedHistory)
+    );
+  } catch (error) {
+    console.error("Error saving weekly medicine history:", error);
+  }
+
+}, [weeklyHistory, todayDate, todaySchedule.length, completedDoses]);
+
+// Prepare last 7 days report
+const weeklyData = [];
+
+for (let i = 6; i >= 0; i--) {
+  const date = new Date();
+  date.setDate(date.getDate() - i);
+
+  const dateKey = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+
+
+const dayData =
+  dateKey === todayDate
+    ? {
+        total: todaySchedule.length,
+        completed: completedDoses,
+      }
+    : weeklyHistory[dateKey] || {
+        total: 0,
+        completed: 0,
+      };
+
+  const percentage =
+    dayData.total === 0
+      ? 0
+      : Math.round(
+          (dayData.completed / dayData.total) * 100
+        );
+
+  weeklyData.push({
+    day: date.toLocaleDateString("en-US", {
+      weekday: "short",
+    }),
+    total: dayData.total,
+    completed: dayData.completed,
+    percentage,
+  });
+}
+
+const weeklyTotal = weeklyData.reduce(
+  (sum, day) => sum + day.total,
+  0
+);
+
+const weeklyCompleted = weeklyData.reduce(
+  (sum, day) => sum + day.completed,
+  0
+);
+
+const weeklyPercentage =
+  weeklyTotal === 0
+    ? 0
+    : Math.round((weeklyCompleted / weeklyTotal) * 100);
 
 useEffect(() => {
   try {
@@ -369,24 +485,26 @@ useEffect(() => {
 }, [takenDoses, todayDate]);
 
 
+
+
   const summaryCards = [
     {
       title: "Total Medicines",
-     value: medicines.length,
+      value: medicines.length,
       subtitle: "Medicines in your list",
       icon: Pill,
       color: "bg-blue-100 text-blue-600",
     },
     {
       title: "Today's Doses",
-      value: todaySchedule.length,
+      value:todaySchedule.length,
       subtitle: "Scheduled for today",
       icon: CalendarCheck,
       color: "bg-purple-100 text-purple-600",
     },
     {
       title: "Completed Doses",
-     value: completedDoses,
+     value:  completedDoses,
       subtitle: "Doses taken today",
       icon: CheckCircle2,
       color: "bg-green-100 text-green-600",
@@ -401,7 +519,6 @@ useEffect(() => {
   ];
 
   
-
   return (
     <div className="space-y-8">
       {/* Welcome header */}
@@ -428,7 +545,6 @@ useEffect(() => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         {summaryCards.map((card) => {
           const Icon = card.icon;
- 
           return (
             <div
               key={card.title}
@@ -459,6 +575,7 @@ useEffect(() => {
           );
         })}
       </div>
+
 
       
 {/* Today's Progress */}
@@ -493,9 +610,81 @@ useEffect(() => {
   </div>
 </div>
 
-  
+{/* Weekly Medicine Report */}
+<div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
 
-{/* Missed Medicine Section */}
+  <div className="mb-5">
+    <h2 className="text-xl font-bold text-slate-800">
+      Weekly Medicine Report
+    </h2>
+
+    <p className="mt-1 text-sm text-slate-500">
+      Your medicine adherence over the last 7 days
+    </p>
+  </div>
+
+  {/* Weekly Summary */}
+  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+    <div className="rounded-xl bg-blue-50 p-4">
+      <p className="text-sm text-slate-500">Weekly Adherence</p>
+      <h3 className="mt-1 text-2xl font-bold text-blue-600">
+        {weeklyPercentage}%
+      </h3>
+    </div>
+
+    <div className="rounded-xl bg-green-50 p-4">
+      <p className="text-sm text-slate-500">Completed Doses</p>
+      <h3 className="mt-1 text-2xl font-bold text-green-600">
+        {weeklyCompleted}
+      </h3>
+    </div>
+
+    <div className="rounded-xl bg-purple-50 p-4">
+      <p className="text-sm text-slate-500">Total Scheduled</p>
+      <h3 className="mt-1 text-2xl font-bold text-purple-600">
+        {weeklyTotal}
+      </h3>
+    </div>
+
+  </div>
+
+  {/* Daily Report */}
+  <div className="space-y-5">
+
+    {weeklyData.map((day, index) => (
+      <div key={index}>
+
+        <div className="mb-2 flex items-center justify-between">
+
+          <span className="font-medium text-slate-700">
+            {day.day}
+          </span>
+
+          <span className="text-sm text-slate-500">
+            {day.completed}/{day.total} doses · {day.percentage}%
+          </span>
+
+        </div>
+
+        <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+
+          <div
+            className="h-full rounded-full bg-blue-600 transition-all duration-300"
+            style={{ width: `${day.percentage}%` }}
+          />
+
+        </div>
+
+      </div>
+    ))}
+
+  </div>
+
+</div>
+      
+
+   {/* Missed Medicine Section */}
 {missedDoses > 0 ? (
   <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
 
@@ -576,7 +765,8 @@ useEffect(() => {
   </div>
 )}
 
-{/* Upcoming Medicines Section */}
+
+      {/* Upcoming Medicines Section */}
 <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
 
   <div className="mb-5 flex items-center gap-3">
@@ -645,12 +835,40 @@ useEffect(() => {
 
           <CalendarCheck className="text-blue-600" size={25} />
         </div>
-        
+       
+
+       {/* Search and Filter */}
+<div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+  {/* Search Input */}
+  <input
+    type="text"
+    placeholder="Search medicine..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  />
+
+  {/* Status Filter */}
+  <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
+  >
+    <option value="All">All Medicines</option>
+    <option value="Upcoming">Upcoming</option>
+    <option value="Taken">Taken</option>
+    <option value="Missed">Missed</option>
+  </select>
+
+</div>
 
 <div className="space-y-6">
-  {todaySchedule.length === 0 ? (
+ {visibleMedicines.length === 0 ? (
     <p className="text-slate-500">
-      No medicines added yet. Add a medicine to see it here.
+      {todaySchedule.length === 0
+  ? "No medicines added yet. Add a medicine to see it here."
+  : "No matching medicines found."}
     </p>
   ) : (
     Object.entries(doseGroups)
@@ -665,9 +883,9 @@ useEffect(() => {
           </h3>
 
           <div className="space-y-3">
-           {groupMedicines.map((medicine, index) => {
-  const status = getMedicineStatus(medicine);
-  const isTaken = status === "Taken";
+            {groupMedicines.map((medicine, index) => {
+             const status = getMedicineStatus(medicine);
+const isTaken = status === "Taken";
 
               return (
                 <div
