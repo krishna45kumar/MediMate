@@ -10,6 +10,16 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+
 function getTodayDate() {
   const today = new Date();
 
@@ -53,6 +63,34 @@ function getDosePeriod(time) {
   return "Other";
 }
 
+
+function WeeklyChartTooltip({ active, payload }) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  const data = payload[0].payload;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+      <p className="mb-2 font-semibold text-slate-800">
+        {data.fullDate}
+      </p>
+
+      <p className="text-sm text-blue-600">
+        Completed: {data.completed}
+      </p>
+
+      <p className="text-sm text-slate-500">
+        Total Scheduled: {data.total}
+      </p>
+
+      <p className="mt-2 font-semibold text-green-600">
+        Adherence: {data.percentage}%
+      </p>
+    </div>
+  );
+}
 
 function Dashboard() {
 
@@ -139,8 +177,6 @@ useEffect(() => {
     window.removeEventListener("focus", loadMedicines);
   };
 }, []);  
-
-
 
 
 
@@ -392,6 +428,8 @@ const progressPercentage =
     : Math.round((completedDoses / todaySchedule.length) * 100);
 
 
+
+    
 // Save daily medicine report
 useEffect(() => {
   const updatedHistory = {
@@ -412,6 +450,7 @@ useEffect(() => {
   }
 
 }, [weeklyHistory, todayDate, todaySchedule.length, completedDoses]);
+
 
 // Prepare last 7 days report
 const weeklyData = [];
@@ -438,6 +477,7 @@ const dayData =
         completed: 0,
       };
 
+
   const percentage =
     dayData.total === 0
       ? 0
@@ -445,14 +485,21 @@ const dayData =
           (dayData.completed / dayData.total) * 100
         );
 
-  weeklyData.push({
-    day: date.toLocaleDateString("en-US", {
-      weekday: "short",
-    }),
-    total: dayData.total,
-    completed: dayData.completed,
-    percentage,
-  });
+ weeklyData.push({
+  day: date.toLocaleDateString("en-US", {
+    weekday: "short",
+  }),
+
+  fullDate: date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }),
+
+  total: dayData.total,
+  completed: dayData.completed,
+  percentage,
+});
 }
 
 const weeklyTotal = weeklyData.reduce(
@@ -648,6 +695,64 @@ useEffect(() => {
     </div>
 
   </div>
+
+
+
+{/* Weekly Bar Chart */}
+<div className="mb-8">
+
+  <h3 className="mb-4 text-lg font-semibold text-slate-800">
+    Weekly Dose Overview
+  </h3>
+
+  <div className="h-72 w-full">
+
+    <ResponsiveContainer width="100%" height="100%">
+
+      <BarChart
+        data={weeklyData}
+        margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+      >
+
+        <CartesianGrid
+          strokeDasharray="3 3"
+          vertical={false}
+        />
+
+        <XAxis
+          dataKey="day"
+          tick={{ fontSize: 12 }}
+        />
+
+        <YAxis
+          allowDecimals={false}
+          tick={{ fontSize: 12 }}
+        />
+
+      <Tooltip content={<WeeklyChartTooltip />} />
+
+        <Bar
+          dataKey="completed"
+          name="Completed Doses"
+          fill="#2563eb"
+          radius={[6, 6, 0, 0]}
+        />
+
+        <Bar
+          dataKey="total"
+          name="Total Scheduled"
+          fill="#cbd5e1"
+          radius={[6, 6, 0, 0]}
+        />
+
+      </BarChart>
+
+    </ResponsiveContainer>
+
+  </div>
+
+</div>
+
 
   {/* Daily Report */}
   <div className="space-y-5">
