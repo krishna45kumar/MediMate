@@ -4,9 +4,6 @@ import {
   CalendarCheck,
   CheckCircle2,
   Clock,
-  Sun,
-  Sunset,
-  Moon,
   ArrowRight,
 } from "lucide-react";
 
@@ -54,34 +51,6 @@ function getDosePeriod(time) {
 }
 
 
-function WeeklyChartTooltip({ active, payload }) {
-  if (!active || !payload || payload.length === 0) {
-    return null;
-  }
-
-  const data = payload[0].payload;
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
-      <p className="mb-2 font-semibold text-slate-800">
-        {data.fullDate}
-      </p>
-
-      <p className="text-sm text-blue-600">
-        Completed: {data.completed}
-      </p>
-
-      <p className="text-sm text-slate-500">
-        Total Scheduled: {data.total}
-      </p>
-
-      <p className="mt-2 font-semibold text-green-600">
-        Adherence: {data.percentage}%
-      </p>
-    </div>
-  );
-}
-
 function Dashboard() {
 
   const [medicines, setMedicines] = useState([]);
@@ -95,12 +64,12 @@ const [searchTerm, setSearchTerm] = useState("");
 const [statusFilter, setStatusFilter] = useState("All");
 
 // Weekly medicine history
-const [weeklyHistory, setWeeklyHistory] = useState(() => {
+const [weeklyHistory] = useState(() => {
   try {
     return JSON.parse(
       localStorage.getItem("weeklyMedicineHistory") || "{}"
     );
-  } catch (error) {
+  } catch {
     return {};
   }
 });
@@ -123,12 +92,11 @@ const [takenDoses, setTakenDoses] = useState(() => {
   }
 });
 
-const [, setCurrentTime] = useState(new Date());
-
+const [currentTime, setCurrentTime] = useState(new Date());
 useEffect(() => {
   const intervalId = setInterval(() => {
     setCurrentTime(new Date());
-  }, 10000);
+  }, 1000);
 
   return () => {
     clearInterval(intervalId);
@@ -217,7 +185,7 @@ useEffect(() => {
         ) {
           savedReminders = {};
         }
-      } catch (error) {
+      } catch {
         savedReminders = {};
       }
 
@@ -381,6 +349,63 @@ const upcomingMedicines = todaySchedule.filter(
   (medicine) => getMedicineStatus(medicine) === "Upcoming"
 );
 
+// Find the next upcoming medicine
+const nextUpcomingMedicine = upcomingMedicines
+  .map((medicine) => {
+    if (!medicine.time) return null;
+
+    const match = String(medicine.time).match(
+      /^([01]\d|2[0-3]):([0-5]\d)$/
+    );
+
+    if (!match) return null;
+
+    const [, hour, minute] = match;
+
+    const medicineDate = new Date();
+    medicineDate.setHours(Number(hour), Number(minute), 0, 0);
+
+    return {
+      ...medicine,
+      scheduledDate: medicineDate,
+    };
+  })
+  .filter(
+    (medicine) =>
+      medicine && medicine.scheduledDate > currentTime
+  )
+  .sort(
+    (a, b) =>
+      a.scheduledDate.getTime() - b.scheduledDate.getTime()
+  )[0] || null;
+
+// Calculate remaining time
+let countdownText = "";
+
+if (nextUpcomingMedicine) {
+  const difference =
+    nextUpcomingMedicine.scheduledDate.getTime() -
+    currentTime.getTime();
+
+  const hours = Math.floor(difference / (1000 * 60 * 60));
+
+  const minutes = Math.floor(
+    (difference % (1000 * 60 * 60)) / (1000 * 60)
+  );
+
+  const seconds = Math.floor(
+    (difference % (1000 * 60)) / 1000
+  );
+
+  if (hours > 0) {
+    countdownText = `${hours}h ${minutes}m remaining`;
+  } else if (minutes > 0) {
+    countdownText = `${minutes}m ${seconds}s remaining`;
+  } else {
+    countdownText = `${seconds}s remaining`;
+  }
+}
+
 // Search and status filter
 const visibleMedicines = todaySchedule.filter((medicine) => {
   const matchesSearch = String(medicine.name || "")
@@ -493,44 +518,6 @@ const dayData =
 }
 
 
-// Find best and lowest adherence days
-const daysWithData = weeklyData.filter(
-  (day) => day.total > 0
-);
-
-const bestDay =
-  daysWithData.length > 0
-    ? daysWithData.reduce((best, current) =>
-        current.percentage > best.percentage
-          ? current
-          : best
-      )
-    : null;
-
-const lowestDay =
-  daysWithData.length > 0
-    ? daysWithData.reduce((lowest, current) =>
-        current.percentage < lowest.percentage
-          ? current
-          : lowest
-      )
-    : null;
-
-const weeklyTotal = weeklyData.reduce(
-  (sum, day) => sum + day.total,
-  0
-);
-
-const weeklyCompleted = weeklyData.reduce(
-  (sum, day) => sum + day.completed,
-  0
-);
-
-const weeklyPercentage =
-  weeklyTotal === 0
-    ? 0
-    : Math.round((weeklyCompleted / weeklyTotal) * 100);
-
 useEffect(() => {
   try {
     localStorage.setItem("doseTrackingDate", todayDate);
@@ -602,74 +589,81 @@ useEffect(() => {
         </p>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.title}
-              className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-xl ${card.color}`}
-                >
-                  <Icon size={24} />
-                </div>
-
-                <ArrowRight size={18} className="text-slate-400" />
-              </div>
-
-              <p className="text-slate-500 text-sm mt-5">
-                {card.title}
-              </p>
-
-              <h2 className="text-3xl font-bold text-slate-800 mt-1">
-                {card.value}
-              </h2>
-
-              <p className="text-xs text-slate-400 mt-2">
-                {card.subtitle}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
-
       
-{/* Today's Progress */}
-<div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-  <div className="mb-3 flex items-center justify-between gap-3">
-    <div>
-      <h2 className="text-lg font-bold text-slate-800">
-        Today's Progress
-      </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        {completedDoses} of {todaySchedule.length} doses completed
-      </p>
+{/* Progress + Summary Cards */}
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+  {/* Today's Progress Circular Card */}
+  <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col items-center justify-center">
+
+    <h2 className="text-sm font-bold text-slate-700 mb-3">
+      Today's Progress
+    </h2>
+
+    <div
+      className="relative flex items-center justify-center rounded-full"
+      style={{
+        width: "100px",
+        height: "100px",
+        background: `conic-gradient(#2563eb ${progressPercentage * 3.6}deg, #e2e8f0 0deg)`
+      }}
+    >
+      <div className="w-[82px] h-[82px] rounded-full bg-white flex items-center justify-center">
+        <span className="text-xl font-bold text-blue-600">
+          {progressPercentage}%
+        </span>
+      </div>
     </div>
 
-    <span className="text-lg font-bold text-blue-600">
-      {progressPercentage}%
-    </span>
+    <p className="text-xs text-slate-500 mt-3 text-center">
+      {completedDoses} of {todaySchedule.length} taken
+    </p>
+
+    <p className="text-xs text-slate-400 mt-1 text-center">
+      Keep your health on track!
+    </p>
+
   </div>
 
-  <div
-    className="h-3 w-full overflow-hidden rounded-full bg-slate-100"
-    role="progressbar"
-    aria-valuenow={progressPercentage}
-    aria-valuemin={0}
-    aria-valuemax={100}
-    aria-label="Today's dose completion progress"
-  >
-    <div
-      className="h-full rounded-full bg-blue-600 transition-all duration-300"
-      style={{ width: `${progressPercentage}%` }}
-    />
-  </div>
+  {/* Existing 4 Summary Cards */}
+  {summaryCards.map((card) => {
+    const Icon = card.icon;
+
+    return (
+      <div
+        key={card.title}
+        className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm"
+      >
+        <div className="flex items-center justify-between">
+
+          <div className={`p-3 rounded-xl ${card.color}`}>
+            <Icon size={24} />
+          </div>
+
+          <ArrowRight size={18} className="text-slate-400" />
+
+        </div>
+
+        <p className="text-slate-500 text-sm mt-5">
+          {card.title}
+        </p>
+
+        <h2 className="text-3xl font-bold text-slate-800 mt-1">
+          {card.value}
+        </h2>
+
+        <p className="text-xs text-slate-400 mt-2">
+          {card.subtitle}
+        </p>
+
+      </div>
+    );
+  })}
+
 </div>
+
+
 
 {/* Missed Medicine Section */}
 {missedDoses > 0 ? (
@@ -753,7 +747,7 @@ useEffect(() => {
 )}
 
 
-      {/* Upcoming Medicines Section */}
+{/* Next Upcoming Medicine Section */}
 <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
 
   <div className="mb-5 flex items-center gap-3">
@@ -763,45 +757,70 @@ useEffect(() => {
 
     <div>
       <h2 className="text-lg font-bold text-slate-800">
-        Upcoming Medicines
+        Upcoming Medicine
       </h2>
 
       <p className="text-sm text-slate-500">
-        {upcomingMedicines.length} medicines remaining today
+        Your next medicine reminder
       </p>
     </div>
   </div>
 
-  {upcomingMedicines.length === 0 ? (
-    <p className="text-sm text-slate-500">
-      No upcoming medicines for today.
-    </p>
-  ) : (
-    <div className="space-y-3">
-      {upcomingMedicines.map((medicine) => (
-        <div
-          key={medicine.id}
-          className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-4"
-        >
-          <div>
-            <h3 className="font-semibold text-slate-800">
-              {medicine.name}
-            </h3>
+  {nextUpcomingMedicine ? (
+    <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
 
-            <p className="mt-1 text-sm text-slate-500">
-              {medicine.dosage}
-            </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-            <p className="mt-1 text-sm text-slate-500">
-              Time: {medicine.time}
-            </p>
-          </div>
+        <div>
+          <h3 className="text-xl font-bold text-slate-800">
+            {nextUpcomingMedicine.name}
+          </h3>
 
-          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-            Upcoming
-          </span>
+          <p className="mt-1 text-sm text-slate-600">
+            Dosage: {nextUpcomingMedicine.dosage}
+          </p>
+
+          <p className="mt-1 text-sm text-slate-600">
+            Scheduled Time: {nextUpcomingMedicine.time}
+          </p>
         </div>
-      ))}
+
+        <span className="w-fit rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+          Next Dose
+        </span>
+
+      </div>
+
+      <div className="mt-5 border-t border-blue-200 pt-4">
+
+        <p className="text-sm text-slate-500">
+          Time Remaining
+        </p>
+
+        <h2 className="mt-1 text-2xl font-bold text-blue-600">
+          {countdownText}
+        </h2>
+
+      </div>
+
+    </div>
+  ) : (
+    <div className="rounded-xl border border-green-100 bg-green-50 p-5">
+
+      <div className="flex items-center gap-3">
+        <CheckCircle2 className="text-green-600" size={28} />
+
+        <div>
+          <h3 className="font-bold text-green-700">
+            All Done for Today!
+          </h3>
+
+          <p className="mt-1 text-sm text-green-600">
+            No upcoming medicines remaining today.
+          </p>
+        </div>
+      </div>
+
     </div>
   )}
 
@@ -859,7 +878,7 @@ useEffect(() => {
     </p>
   ) : (
     Object.entries(doseGroups)
-      .filter(([period, groupMedicines]) => groupMedicines.length > 0)
+      .filter(([, groupMedicines]) => groupMedicines.length > 0)
       .map(([period, groupMedicines]) => (
         <div key={period}>
           <h3 className="mb-3 text-lg font-semibold text-slate-800">

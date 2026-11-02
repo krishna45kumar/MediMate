@@ -38,6 +38,18 @@ function getTodayDate() {
 function WeeklyReport() {
   const todayDate = getTodayDate();
 
+  // Load medicine-wise weekly history
+const doseHistory = useMemo(() => {
+  try {
+    return JSON.parse(
+      localStorage.getItem("weeklyMedicineHistory") || "{}"
+    );
+  } catch (error) {
+    console.error("Unable to load dose history:", error);
+    return {};
+  }
+}, [todayDate]);
+
   const weeklyData = useMemo(() => {
     let history = {};
     let medicines = [];
@@ -85,6 +97,7 @@ function WeeklyReport() {
         total === 0 ? 0 : Math.round((completed / total) * 100);
 
       days.push({
+        dateKey,
         day: date.toLocaleDateString("en-US", { weekday: "short" }),
         fullDate: date.toLocaleDateString("en-IN", {
           day: "2-digit",
@@ -136,7 +149,7 @@ const handleDownloadWeeklyReport = () => {
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
-  doc.text("`MediMate`", 20, 17);
+  doc.text("MediMate", 20, 17);
 
   doc.setFontSize(13);
   doc.text("Weekly Medicine Report", 20, 28);
@@ -351,7 +364,7 @@ for (let page = 1; page <= totalPages; page++) {
   doc.setFontSize(10);
   doc.setTextColor(37, 99, 235);
 
-  doc.text("MEDIMATE ", 20, 10);
+  doc.text("MEDIMATE", 20, 20);
 
   
 doc.setFont("helvetica", "normal");
@@ -392,6 +405,90 @@ doc.line(20, 9, 190, 9);
   );
 }
 
+
+// Dose-wise Medicine History
+doc.addPage();
+
+doc.setFontSize(16);
+doc.setTextColor(30, 41, 59);
+doc.text("Dose-wise Medicine History", 20, 25);
+
+let historyY = 40;
+
+weeklyData.forEach((day) => {
+  const dayHistory = doseHistory[day.dateKey];
+
+  // Add another page if space is insufficient
+  if (historyY > 255) {
+    doc.addPage();
+    historyY = 25;
+  }
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(37, 99, 235);
+  doc.text(day.fullDate, 20, historyY);
+
+  historyY += 9;
+
+  if (!dayHistory || !dayHistory.doseDetails) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120, 120, 120);
+    doc.text(
+      "Individual medicine history not available for this date.",
+      20,
+      historyY
+    );
+    historyY += 12;
+    return;
+  }
+
+  dayHistory.doseDetails.forEach((medicine) => {
+    if (historyY > 270) {
+      doc.addPage();
+      historyY = 25;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text(
+      `${medicine.name || "Medicine"} - ${medicine.dosage || "N/A"}`,
+      20,
+      historyY
+    );
+
+    historyY += 6;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+
+    doc.text(
+      `Time: ${medicine.time || "N/A"}`,
+      25,
+      historyY
+    );
+
+    const status = medicine.status || "Unknown";
+
+    if (status === "Taken") {
+      doc.setTextColor(22, 163, 74);
+    } else if (status === "Missed") {
+      doc.setTextColor(220, 38, 38);
+    } else {
+      doc.setTextColor(217, 119, 6);
+    }
+
+    doc.text(`Status: ${status}`, 100, historyY);
+
+    historyY += 10;
+    doc.setTextColor(30, 41, 59);
+  });
+
+  historyY += 5;
+});
   // Save PDF
   doc.save("MediMate-Weekly-Report.pdf");
 };
