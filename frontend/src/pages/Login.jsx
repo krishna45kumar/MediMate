@@ -40,14 +40,11 @@ function Login() {
 
                         {/* Illustration */}
                         <div className="flex justify-center py-10">
-
-                         <div className="flex justify-center py-10">
-                   <img
-                  src={illustration}
-                   alt="Medicine reminder illustration"
-                       className="w-70 h-55 object-contain" />
-                           </div>
-
+                            <img
+                                src={illustration}
+                                alt="Medicine reminder illustration"
+                                className="w-70 h-55 object-contain"
+                            />
                         </div>
 
 
@@ -103,7 +100,7 @@ function Login() {
                                 <input
                                     type="email"
                                     placeholder="Enter your email"
-                       z             className="w-full border border-slate-200 rounded-xl py-3.5 pl-11 pr-4 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition"
+                                    className="w-full border border-slate-200 rounded-xl py-3.5 pl-11 pr-4 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition"
                                 />
 
                             </div>

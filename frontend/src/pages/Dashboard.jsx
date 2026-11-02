@@ -10,16 +10,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
-
 function getTodayDate() {
   const today = new Date();
 
@@ -502,6 +492,30 @@ const dayData =
 });
 }
 
+
+// Find best and lowest adherence days
+const daysWithData = weeklyData.filter(
+  (day) => day.total > 0
+);
+
+const bestDay =
+  daysWithData.length > 0
+    ? daysWithData.reduce((best, current) =>
+        current.percentage > best.percentage
+          ? current
+          : best
+      )
+    : null;
+
+const lowestDay =
+  daysWithData.length > 0
+    ? daysWithData.reduce((lowest, current) =>
+        current.percentage < lowest.percentage
+          ? current
+          : lowest
+      )
+    : null;
+
 const weeklyTotal = weeklyData.reduce(
   (sum, day) => sum + day.total,
   0
@@ -657,139 +671,7 @@ useEffect(() => {
   </div>
 </div>
 
-{/* Weekly Medicine Report */}
-<div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-
-  <div className="mb-5">
-    <h2 className="text-xl font-bold text-slate-800">
-      Weekly Medicine Report
-    </h2>
-
-    <p className="mt-1 text-sm text-slate-500">
-      Your medicine adherence over the last 7 days
-    </p>
-  </div>
-
-  {/* Weekly Summary */}
-  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-
-    <div className="rounded-xl bg-blue-50 p-4">
-      <p className="text-sm text-slate-500">Weekly Adherence</p>
-      <h3 className="mt-1 text-2xl font-bold text-blue-600">
-        {weeklyPercentage}%
-      </h3>
-    </div>
-
-    <div className="rounded-xl bg-green-50 p-4">
-      <p className="text-sm text-slate-500">Completed Doses</p>
-      <h3 className="mt-1 text-2xl font-bold text-green-600">
-        {weeklyCompleted}
-      </h3>
-    </div>
-
-    <div className="rounded-xl bg-purple-50 p-4">
-      <p className="text-sm text-slate-500">Total Scheduled</p>
-      <h3 className="mt-1 text-2xl font-bold text-purple-600">
-        {weeklyTotal}
-      </h3>
-    </div>
-
-  </div>
-
-
-
-{/* Weekly Bar Chart */}
-<div className="mb-8">
-
-  <h3 className="mb-4 text-lg font-semibold text-slate-800">
-    Weekly Dose Overview
-  </h3>
-
-  <div className="h-72 w-full">
-
-    <ResponsiveContainer width="100%" height="100%">
-
-      <BarChart
-        data={weeklyData}
-        margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
-      >
-
-        <CartesianGrid
-          strokeDasharray="3 3"
-          vertical={false}
-        />
-
-        <XAxis
-          dataKey="day"
-          tick={{ fontSize: 12 }}
-        />
-
-        <YAxis
-          allowDecimals={false}
-          tick={{ fontSize: 12 }}
-        />
-
-      <Tooltip content={<WeeklyChartTooltip />} />
-
-        <Bar
-          dataKey="completed"
-          name="Completed Doses"
-          fill="#2563eb"
-          radius={[6, 6, 0, 0]}
-        />
-
-        <Bar
-          dataKey="total"
-          name="Total Scheduled"
-          fill="#cbd5e1"
-          radius={[6, 6, 0, 0]}
-        />
-
-      </BarChart>
-
-    </ResponsiveContainer>
-
-  </div>
-
-</div>
-
-
-  {/* Daily Report */}
-  <div className="space-y-5">
-
-    {weeklyData.map((day, index) => (
-      <div key={index}>
-
-        <div className="mb-2 flex items-center justify-between">
-
-          <span className="font-medium text-slate-700">
-            {day.day}
-          </span>
-
-          <span className="text-sm text-slate-500">
-            {day.completed}/{day.total} doses · {day.percentage}%
-          </span>
-
-        </div>
-
-        <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
-
-          <div
-            className="h-full rounded-full bg-blue-600 transition-all duration-300"
-            style={{ width: `${day.percentage}%` }}
-          />
-
-        </div>
-
-      </div>
-    ))}
-
-  </div>
-
-</div>
-      
-
-   {/* Missed Medicine Section */}
+{/* Missed Medicine Section */}
 {missedDoses > 0 ? (
   <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
 

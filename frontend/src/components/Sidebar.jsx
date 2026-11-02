@@ -6,6 +6,7 @@ import {
     LayoutDashboard,
     CalendarDays,
     History,
+    FileBarChart,
     Bot,
     Settings,
     LogOut
@@ -29,6 +30,11 @@ function Sidebar() {
             icon: CalendarDays
         },
         {
+            name: "Weekly Report",
+            path: "/weekly-report",
+            icon: FileBarChart
+        },
+        {
             name: "History",
             path: "/history",
             icon: History
@@ -41,7 +47,7 @@ function Sidebar() {
     ];
 
     return (
-        <aside className="w-64 min-h-screen bg-white border-r border-slate-200 p-5 flex flex-col">
+        <aside className="fixed inset-y-0 left-0 z-30 h-screen w-64 overflow-y-auto bg-white border-r border-slate-200 p-5 flex flex-col">
 
             {/* Logo */}
             <div className="flex items-center gap-3 mb-10">

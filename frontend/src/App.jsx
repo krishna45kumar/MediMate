@@ -4,16 +4,15 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Medicines from "./pages/Medicines";
+import WeeklyReport from "./pages/WeeklyReport";
 import DashboardLayout from "./components/DashboardLayout";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login page - without Sidebar */}
         <Route path="/" element={<Login />} />
 
-        {/* Pages with common Sidebar */}
         <Route
           path="/dashboard"
           element={
@@ -28,6 +27,15 @@ function App() {
           element={
             <DashboardLayout>
               <Medicines />
+            </DashboardLayout>
+          }
+        />
+
+        <Route
+          path="/weekly-report"
+          element={
+            <DashboardLayout>
+              <WeeklyReport />
             </DashboardLayout>
           }
         />
