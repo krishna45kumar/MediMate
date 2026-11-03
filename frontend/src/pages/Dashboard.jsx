@@ -76,18 +76,27 @@ const [weeklyHistory] = useState(() => {
 
 const [takenDoses, setTakenDoses] = useState(() => {
   try {
+    const history = JSON.parse(
+      localStorage.getItem("medicineDoseHistory") || "{}"
+    );
+
+    const today = getTodayDate();
+
+    if (history[today]) {
+      return history[today].map(String);
+    }
+
+    // Purane saved data ko support karo
     const savedDate = localStorage.getItem("doseTrackingDate");
-    const savedDoses = localStorage.getItem("takenDoses");
 
-    if (savedDate === getTodayDate() && savedDoses) {
-      const parsedDoses = JSON.parse(savedDoses);
-
-      return Array.isArray(parsedDoses) ? parsedDoses : [];
+    if (savedDate === today) {
+      return JSON.parse(
+        localStorage.getItem("takenDoses") || "[]"
+      ).map(String);
     }
 
     return [];
-  } catch (error) {
-    console.error("Error loading taken doses:", error);
+  } catch {
     return [];
   }
 });
@@ -107,10 +116,21 @@ useEffect(() => {
   function checkDate() {
     const currentDate = getTodayDate();
 
-    if (currentDate !== todayDate) {
-      setTodayDate(currentDate);
-      setTakenDoses([]);
-    }
+  if (currentDate !== todayDate) {
+  setTodayDate(currentDate);
+
+  try {
+    const history = JSON.parse(
+      localStorage.getItem("medicineDoseHistory") || "{}"
+    );
+
+    setTakenDoses(
+      (history[currentDate] || []).map(String)
+    );
+  } catch {
+    setTakenDoses([]);
+  }
+}
   }
 
   checkDate();
@@ -335,9 +355,10 @@ const todaySchedule = [...medicines].sort((a, b) => {
 
 
    const completedDoses = todaySchedule.filter((medicine) =>
-  takenDoses.includes(medicine.id)
+  takenDoses.some(
+    (id) => String(id) === String(medicine.id)
+  )
 ).length;
-
 
 const missedMedicines = todaySchedule.filter(
   (medicine) => getMedicineStatus(medicine) === "Missed"
@@ -520,15 +541,25 @@ const dayData =
 
 useEffect(() => {
   try {
+    const history = JSON.parse(
+      localStorage.getItem("medicineDoseHistory") || "{}"
+    );
+
+    history[todayDate] = takenDoses.map(String);
+
+    localStorage.setItem(
+      "medicineDoseHistory",
+      JSON.stringify(history)
+    );
+
+    // Existing features ke saath compatibility
     localStorage.setItem("doseTrackingDate", todayDate);
     localStorage.setItem(
       "takenDoses",
       JSON.stringify(takenDoses)
     );
-
-    console.log("Dose status saved successfully:", takenDoses);
   } catch (error) {
-    console.error("Error saving dose status:", error);
+    console.error("Error saving dose history:", error);
   }
 }, [takenDoses, todayDate]);
 
@@ -710,14 +741,14 @@ useEffect(() => {
           <button
             type="button"
             onClick={() => {
-              setTakenDoses((previous) =>
-                previous.some(
-                  (id) => String(id) === String(medicine.id)
-                )
-                  ? previous
-                  : [...previous, medicine.id]
-              );
-            }}
+  setTakenDoses((previous) =>
+    previous.some(
+      (id) => String(id) === String(medicine.id)
+    )
+      ? previous
+      : [...previous, String(medicine.id)]
+  );
+}}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
           >
             ✓ Mark as Taken
@@ -931,13 +962,17 @@ const isTaken = status === "Taken";
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setTakenDoses((previous) =>
-                        previous.includes(medicine.id)
-                          ? previous.filter((id) => id !== medicine.id)
-                          : [...previous, medicine.id]
-                      );
-                    }}
+                  onClick={() => {
+  setTakenDoses((previous) =>
+    previous.some(
+      (id) => String(id) === String(medicine.id)
+    )
+      ? previous.filter(
+          (id) => String(id) !== String(medicine.id)
+        )
+      : [...previous, String(medicine.id)]
+  );
+}}
                     className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
                       isTaken
                         ? "bg-green-100 text-green-700"

@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Medicines from "./pages/Medicines";
 import WeeklyReport from "./pages/WeeklyReport";
 import DashboardLayout from "./components/DashboardLayout";
+import Schedule from "./pages/Schedule";
 
 function App() {
   return (
@@ -39,6 +40,14 @@ function App() {
             </DashboardLayout>
           }
         />
+        <Route
+  path="/schedule"
+  element={
+    <DashboardLayout>
+      <Schedule />
+    </DashboardLayout>
+  }
+/>
       </Routes>
     </BrowserRouter>
   );

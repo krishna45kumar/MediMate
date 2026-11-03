@@ -48,7 +48,7 @@ const doseHistory = useMemo(() => {
     console.error("Unable to load dose history:", error);
     return {};
   }
-}, [todayDate]);
+}, []);
 
   const weeklyData = useMemo(() => {
     let history = {};

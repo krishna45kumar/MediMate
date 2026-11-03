@@ -44,6 +44,7 @@ function Sidebar() {
             path: "/ai-assistant",
             icon: Bot
         }
+
     ];
 
     return (
