@@ -31,6 +31,7 @@ function getDosePeriod(time) {
 function Schedule() {
   const [medicines, setMedicines] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getDateString(new Date()));
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [doseHistory, setDoseHistory] = useState(() => {
     try {
       return JSON.parse(
@@ -158,6 +159,128 @@ function Schedule() {
     { name: "Night", icon: Moon },
   ];
 
+  // Calendar Month Navigation
+const changeCalendarMonth = (direction) => {
+  setCalendarMonth((prev) => {
+    const newMonth = new Date(prev);
+    newMonth.setMonth(newMonth.getMonth() + direction);
+    return newMonth;
+  });
+};
+
+// Calendar Date Status
+const getCalendarDayStatus = (dateString) => {
+  if (medicines.length === 0) {
+    return "none";
+  }
+
+  const today = getDateString(new Date());
+
+  if (dateString > today) {
+    return "none";
+  }
+
+  const takenIds = doseHistory[dateString] || [];
+
+  const takenCount = medicines.filter((medicine) =>
+    takenIds.some(
+      (id) => String(id) === String(medicine.id)
+    )
+  ).length;
+
+  if (takenCount === medicines.length) {
+    return "taken";
+  }
+
+  if (takenCount > 0) {
+    return "partial";
+  }
+
+  if (dateString < today) {
+    return "missed";
+  }
+
+  return "none";
+};
+
+// Calendar Dates
+const getCalendarDates = () => {
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  const dates = [];
+
+  for (let i = 0; i < firstDay; i++) {
+    dates.push(null);
+  }
+
+  for (let day = 1; day <= totalDays; day++) {
+    dates.push(
+      getDateString(new Date(year, month, day))
+    );
+  }
+
+  return dates;
+};
+
+const calendarDates = getCalendarDates();
+
+const monthName = calendarMonth.toLocaleDateString("en-IN", {
+  month: "long",
+  year: "numeric",
+});
+
+    // Daily Summary Calculation
+  const totalMedicines = medicines.length;
+
+  const takenMedicines = medicines.filter(
+    (medicine) => getMedicineStatus(medicine) === "Taken"
+  ).length;
+
+  const missedMedicines = medicines.filter(
+    (medicine) => getMedicineStatus(medicine) === "Missed"
+  ).length;
+
+  const upcomingMedicines = medicines.filter(
+    (medicine) => getMedicineStatus(medicine) === "Upcoming"
+  ).length;
+
+  const progressPercentage =
+    totalMedicines === 0
+      ? 0
+      : Math.round((takenMedicines / totalMedicines) * 100);
+
+  const summaryCards = [
+    {
+      title: "Total Medicines",
+      value: totalMedicines,
+      icon: Pill,
+      color: "bg-blue-50 text-blue-600",
+    },
+    {
+      title: "Taken",
+      value: takenMedicines,
+      icon: CheckCircle2,
+      color: "bg-green-50 text-green-600",
+    },
+    {
+      title: "Missed",
+      value: missedMedicines,
+      icon: Clock,
+      color: "bg-red-50 text-red-600",
+    },
+    {
+      title: "Upcoming",
+      value: upcomingMedicines,
+      icon: CalendarDays,
+      color: "bg-yellow-50 text-yellow-600",
+    },
+  ];
+
+
   const dateLabel = new Date(
     selectedDate + "T00:00:00"
   ).toLocaleDateString("en-IN", {
@@ -203,6 +326,201 @@ function Schedule() {
           <ChevronRight size={22} />
         </button>
       </div>
+     
+
+
+{/* Calendar View */}
+<div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+
+  {/* Calendar Header */}
+  <div className="flex items-center justify-between mb-6">
+
+    <div>
+      <h2 className="text-lg font-bold text-gray-800">
+        Calendar View
+      </h2>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Track your medicine history
+      </p>
+    </div>
+
+    <div className="flex items-center gap-3">
+
+      <button
+        onClick={() => changeCalendarMonth(-1)}
+        className="p-2 rounded-lg hover:bg-gray-100"
+      >
+        <ChevronLeft size={20} />
+      </button>
+
+      <span className="font-semibold text-gray-800 min-w-28 text-center">
+        {monthName}
+      </span>
+
+      <button
+        onClick={() => changeCalendarMonth(1)}
+        className="p-2 rounded-lg hover:bg-gray-100"
+        disabled={
+          calendarMonth.getFullYear() === new Date().getFullYear() &&
+          calendarMonth.getMonth() === new Date().getMonth()
+        }
+      >
+        <ChevronRight size={20} />
+      </button>
+
+    </div>
+  </div>
+
+  {/* Week Days */}
+  <div className="grid grid-cols-7 gap-2 mb-3">
+
+    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+      (day) => (
+        <div
+          key={day}
+          className="text-center text-xs font-semibold text-gray-500"
+        >
+          {day}
+        </div>
+      )
+    )}
+
+  </div>
+
+  {/* Calendar Dates */}
+  <div className="grid grid-cols-7 gap-2">
+
+    {calendarDates.map((date, index) => {
+
+      if (!date) {
+        return <div key={`empty-${index}`} />;
+      }
+
+      const dayNumber = Number(date.split("-")[2]);
+      const status = getCalendarDayStatus(date);
+      const isSelected = date === selectedDate;
+      const isToday = date === getDateString(new Date());
+
+      return (
+        <button
+          key={date}
+          onClick={() => setSelectedDate(date)}
+          className={`relative min-h-12 sm:min-h-14 rounded-xl flex flex-col items-center justify-center gap-1 transition
+            ${
+              isSelected
+                ? "bg-blue-600 text-white"
+                : "hover:bg-blue-50 text-gray-700"
+            }
+            ${
+              isToday && !isSelected
+                ? "border-2 border-blue-500"
+                : ""
+            }
+          `}
+        >
+
+          <span className="text-sm font-semibold">
+            {dayNumber}
+          </span>
+
+          <span
+            className={`w-2 h-2 rounded-full
+              ${
+                status === "taken"
+                  ? "bg-green-500"
+                  : status === "partial"
+                  ? "bg-yellow-400"
+                  : status === "missed"
+                  ? "bg-red-500"
+                  : "bg-transparent"
+              }
+            `}
+          />
+
+        </button>
+      );
+    })}
+
+  </div>
+
+  {/* Calendar Legend */}
+  <div className="flex flex-wrap gap-4 mt-5 pt-4 border-t border-gray-100">
+
+    <div className="flex items-center gap-2 text-xs text-gray-600">
+      <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+      Taken
+    </div>
+
+    <div className="flex items-center gap-2 text-xs text-gray-600">
+      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+      Partially Taken
+    </div>
+
+    <div className="flex items-center gap-2 text-xs text-gray-600">
+      <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+      Missed
+    </div>
+
+  </div>
+
+</div>
+
+
+           {/* Daily Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {summaryCards.map((card) => {
+          const Icon = card.icon;
+
+          return (
+            <div
+              key={card.title}
+              className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    {card.title}
+                  </p>
+
+                  <h2 className="text-2xl font-bold text-gray-800 mt-2">
+                    {card.value}
+                  </h2>
+                </div>
+
+                <div className={`p-3 rounded-xl ${card.color}`}>
+                  <Icon size={24} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Daily Progress */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-800">
+            Daily Progress
+          </h2>
+
+          <span className="font-bold text-blue-600">
+            {progressPercentage}%
+          </span>
+        </div>
+
+        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+          <div
+            className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+
+        <p className="text-sm text-gray-500 mt-2">
+          {takenMedicines} out of {totalMedicines} medicines completed
+        </p>
+      </div>
+
 
       {/* Medicine Sections */}
       {periods.map((period) => {
