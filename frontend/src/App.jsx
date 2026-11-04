@@ -7,6 +7,7 @@ import Medicines from "./pages/Medicines";
 import WeeklyReport from "./pages/WeeklyReport";
 import DashboardLayout from "./components/DashboardLayout";
 import Schedule from "./pages/Schedule";
+import History from "./pages/History";
 
 function App() {
   return (
@@ -45,6 +46,14 @@ function App() {
   element={
     <DashboardLayout>
       <Schedule />
+    </DashboardLayout>
+  }
+/>
+<Route
+  path="/history"
+  element={
+    <DashboardLayout>
+      <History />
     </DashboardLayout>
   }
 />

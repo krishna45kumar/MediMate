@@ -32,6 +32,8 @@ function Schedule() {
   const [medicines, setMedicines] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getDateString(new Date()));
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [calendarFilter, setCalendarFilter] = useState("All");
+const [medicineFilter, setMedicineFilter] = useState("All");
   const [doseHistory, setDoseHistory] = useState(() => {
     try {
       return JSON.parse(
@@ -162,10 +164,26 @@ function Schedule() {
   // Calendar Month Navigation
 const changeCalendarMonth = (direction) => {
   setCalendarMonth((prev) => {
-    const newMonth = new Date(prev);
-    newMonth.setMonth(newMonth.getMonth() + direction);
+    const newMonth = new Date(
+      prev.getFullYear(),
+      prev.getMonth() + direction,
+      1
+    );
+
     return newMonth;
   });
+};
+
+const goToToday = () => {
+  const today = new Date();
+
+  setSelectedDate(getDateString(today));
+  setCalendarMonth(
+    new Date(today.getFullYear(), today.getMonth(), 1)
+  );
+
+  setCalendarFilter("All");
+  setMedicineFilter("All");
 };
 
 // Calendar Date Status
@@ -232,6 +250,87 @@ const monthName = calendarMonth.toLocaleDateString("en-IN", {
   month: "long",
   year: "numeric",
 });
+
+// Calendar Filtered Dates
+const filteredCalendarDates = calendarDates.map((date) => {
+  if (!date || calendarFilter === "All") {
+    return date;
+  }
+
+  const status = getCalendarDayStatus(date);
+
+  if (calendarFilter === "Taken" && status !== "taken") {
+    return null;
+  }
+
+  if (
+    calendarFilter === "Partially Taken" &&
+    status !== "partial"
+  ) {
+    return null;
+  }
+
+  if (calendarFilter === "Missed" && status !== "missed") {
+    return null;
+  }
+
+  return date;
+});
+
+// Monthly Statistics
+const currentYear = calendarMonth.getFullYear();
+const currentMonth = String(
+  calendarMonth.getMonth() + 1
+).padStart(2, "0");
+
+const monthPrefix = `${currentYear}-${currentMonth}`;
+
+const todayString = getDateString(new Date());
+
+const isCurrentMonth =
+  calendarMonth.getFullYear() === new Date().getFullYear() &&
+  calendarMonth.getMonth() === new Date().getMonth();
+
+const daysToCount = isCurrentMonth
+  ? new Date().getDate()
+  : monthPrefix < todayString.slice(0, 7)
+  ? new Date(currentYear, calendarMonth.getMonth() + 1, 0).getDate()
+  : 0;
+
+const monthlyExpectedDoses = medicines.length * daysToCount;
+
+const monthlyTakenDoses = Object.entries(doseHistory)
+  .filter(([date]) => date.startsWith(monthPrefix) && date <= todayString)
+  .reduce((total, [date, ids]) => {
+    const validIds = (ids || []).map(String);
+
+    const validTakenCount = medicines.filter((medicine) =>
+      validIds.includes(String(medicine.id))
+    ).length;
+
+    return total + validTakenCount;
+  }, 0);
+
+const todayUpcomingCount = isCurrentMonth
+  ? medicines.filter(
+      (medicine) => getMedicineStatus(medicine) === "Upcoming"
+    ).length
+  : 0;
+
+const monthlyMissedDoses = Math.max(
+  0,
+  monthlyExpectedDoses - monthlyTakenDoses - todayUpcomingCount
+);
+
+const monthlyProgress =
+  monthlyExpectedDoses === 0
+    ? 0
+    : Math.min(
+        100,
+        Math.round(
+          (monthlyTakenDoses / monthlyExpectedDoses) * 100
+        )
+      );
 
     // Daily Summary Calculation
   const totalMedicines = medicines.length;
@@ -348,6 +447,13 @@ const monthName = calendarMonth.toLocaleDateString("en-IN", {
     <div className="flex items-center gap-3">
 
       <button
+  onClick={goToToday}
+  className="px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+>
+  Today
+</button>
+
+      <button
         onClick={() => changeCalendarMonth(-1)}
         className="p-2 rounded-lg hover:bg-gray-100"
       >
@@ -371,7 +477,26 @@ const monthName = calendarMonth.toLocaleDateString("en-IN", {
 
     </div>
   </div>
+   {/* Calendar Filters */}
+<div className="flex flex-wrap gap-2 mb-5">
 
+  {["All", "Taken", "Partially Taken", "Missed"].map(
+    (filter) => (
+      <button
+        key={filter}
+        onClick={() => setCalendarFilter(filter)}
+        className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition ${
+          calendarFilter === filter
+            ? "bg-blue-600 text-white"
+            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+        }`}
+      >
+        {filter}
+      </button>
+    )
+  )}
+
+</div>
   {/* Week Days */}
   <div className="grid grid-cols-7 gap-2 mb-3">
 
@@ -391,7 +516,7 @@ const monthName = calendarMonth.toLocaleDateString("en-IN", {
   {/* Calendar Dates */}
   <div className="grid grid-cols-7 gap-2">
 
-    {calendarDates.map((date, index) => {
+   {filteredCalendarDates.map((date, index) => {
 
       if (!date) {
         return <div key={`empty-${index}`} />;
@@ -465,72 +590,231 @@ const monthName = calendarMonth.toLocaleDateString("en-IN", {
   </div>
 
 </div>
+   
+
+   {/* Monthly Statistics */}
+<div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+
+  <div className="flex items-center justify-between mb-5">
+    <div>
+      <h2 className="text-lg font-bold text-gray-800">
+        Monthly Statistics
+      </h2>
+
+      <p className="text-sm text-gray-500 mt-1">
+        {monthName} medicine report
+      </p>
+    </div>
+
+    <CalendarDays className="text-blue-600" size={25} />
+  </div>
+
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+    <div className="bg-blue-50 rounded-xl p-4">
+      <p className="text-xs text-blue-600">Total Doses</p>
+      <h3 className="text-2xl font-bold text-blue-700 mt-2">
+        {monthlyExpectedDoses}
+      </h3>
+    </div>
+
+    <div className="bg-green-50 rounded-xl p-4">
+      <p className="text-xs text-green-600">Taken Doses</p>
+      <h3 className="text-2xl font-bold text-green-700 mt-2">
+        {monthlyTakenDoses}
+      </h3>
+    </div>
+
+    <div className="bg-red-50 rounded-xl p-4">
+      <p className="text-xs text-red-600">Missed Doses</p>
+      <h3 className="text-2xl font-bold text-red-700 mt-2">
+        {monthlyMissedDoses}
+      </h3>
+    </div>
+
+    <div className="bg-purple-50 rounded-xl p-4">
+      <p className="text-xs text-purple-600">Completion</p>
+      <h3 className="text-2xl font-bold text-purple-700 mt-2">
+        {monthlyProgress}%
+      </h3>
+    </div>
+
+  </div>
+
+  <div className="mt-5">
+    <div className="flex justify-between text-sm mb-2">
+      <span className="text-gray-500">Monthly Progress</span>
+      <span className="font-semibold text-blue-600">
+        {monthlyProgress}%
+      </span>
+    </div>
+
+    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+      <div
+        className="h-3 bg-blue-600 rounded-full transition-all duration-500"
+        style={{ width: `${monthlyProgress}%` }}
+      />
+    </div>
+  </div>
+
+</div>
 
 
-           {/* Daily Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
+{/* Daily Summary Dashboard */}
+<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
 
-          return (
-            <div
-              key={card.title}
-              className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">
-                    {card.title}
-                  </p>
+  {/* Today's Progress */}
+  <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col items-center justify-center">
 
-                  <h2 className="text-2xl font-bold text-gray-800 mt-2">
-                    {card.value}
-                  </h2>
-                </div>
+    <h2 className="font-semibold text-gray-800 mb-4">
+      Today's Progress
+    </h2>
 
-                <div className={`p-3 rounded-xl ${card.color}`}>
-                  <Icon size={24} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
+    <div className="relative w-32 h-32 flex items-center justify-center">
+      <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
+        <circle
+          cx="60"
+          cy="60"
+          r="45"
+          stroke="#E5E7EB"
+          strokeWidth="10"
+          fill="none"
+        />
+
+        <circle
+          cx="60"
+          cy="60"
+          r="45"
+          stroke="#2563EB"
+          strokeWidth="10"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={2 * Math.PI * 45}
+          strokeDashoffset={
+            2 * Math.PI * 45 -
+            (progressPercentage / 100) * (2 * Math.PI * 45)
+          }
+          className="transition-all duration-700"
+        />
+      </svg>
+
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-2xl font-bold text-blue-600">
+          {progressPercentage}%
+        </span>
       </div>
+    </div>
 
-      {/* Daily Progress */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-800">
-            Daily Progress
-          </h2>
+    <p className="text-sm text-gray-500 mt-4">
+      {takenMedicines} of {totalMedicines} taken
+    </p>
 
-          <span className="font-bold text-blue-600">
-            {progressPercentage}%
-          </span>
+    <p className="text-xs text-gray-400 mt-1">
+      Keep your health on track!
+    </p>
+  </div>
+
+  {/* Four Summary Cards */}
+  {summaryCards.map((card) => {
+    const Icon = card.icon;
+
+    return (
+      <div
+        key={card.title}
+        className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className={`p-3 rounded-xl ${card.color}`}>
+            <Icon size={25} />
+          </div>
+
+          <ChevronRight className="text-gray-400" size={22} />
         </div>
 
-        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-          <div
-            className="bg-blue-600 h-3 rounded-full transition-all duration-500"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
+        <p className="text-sm text-gray-500">
+          {card.title}
+        </p>
 
-        <p className="text-sm text-gray-500 mt-2">
-          {takenMedicines} out of {totalMedicines} medicines completed
+        <h2 className="text-3xl font-bold text-gray-800 mt-2">
+          {card.value}
+        </h2>
+
+        <p className="text-sm text-gray-400 mt-2">
+          {card.title === "Total Medicines"
+            ? "Medicines in your list"
+            : card.title === "Taken"
+            ? "Medicines taken"
+            : card.title === "Missed"
+            ? "Medicines missed"
+            : "Medicines yet to be taken"}
         </p>
       </div>
+    );
+  })}
 
+</div>
+
+
+
+  {/* Medicine Status Filter */}
+<div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
+    <div>
+      <h2 className="font-bold text-gray-800">
+        Filter Medicines
+      </h2>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Select medicine status
+      </p>
+    </div>
+
+    <div className="flex flex-wrap gap-2">
+
+      {["All", "Taken", "Missed", "Upcoming"].map(
+        (filter) => (
+          <button
+            key={filter}
+            onClick={() => setMedicineFilter(filter)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+              medicineFilter === filter
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {filter}
+          </button>
+        )
+      )}
+
+    </div>
+
+  </div>
+
+</div>
 
       {/* Medicine Sections */}
       {periods.map((period) => {
         const Icon = period.icon;
+const periodMedicines = medicines
+  .filter((medicine) => {
+    const matchesPeriod =
+      getDosePeriod(medicine.time) === period.name;
 
-        const periodMedicines = medicines
-          .filter(
-            (medicine) => getDosePeriod(medicine.time) === period.name
-          )
-          .sort((a, b) => a.time.localeCompare(b.time));
+    const status = getMedicineStatus(medicine);
+
+    const matchesStatus =
+      medicineFilter === "All" ||
+      status === medicineFilter;
+
+    return matchesPeriod && matchesStatus;
+  })
+  .sort((a, b) =>
+    (a.time || "").localeCompare(b.time || "")
+  );
+
 
         return (
           <div
