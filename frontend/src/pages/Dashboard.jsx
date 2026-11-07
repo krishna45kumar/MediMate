@@ -17,6 +17,17 @@ function getTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
+function formatTime12Hour(time) {
+  if (!time) return "";
+
+  const [hours, minutes] = time.split(":").map(Number);
+
+  const period = hours >= 12 ? "PM" : "AM";
+  const formattedHours = hours % 12 || 12;
+
+  return `${String(formattedHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
+}
+
 
 function getDosePeriod(time) {
   if (!time) return "Other";
@@ -734,7 +745,7 @@ useEffect(() => {
             </p>
 
             <p className="text-sm text-slate-500">
-              Time: {medicine.time}
+           Time: {formatTime12Hour(medicine.time)}
             </p>
           </div>
 
@@ -812,7 +823,7 @@ useEffect(() => {
           </p>
 
           <p className="mt-1 text-sm text-slate-600">
-            Scheduled Time: {nextUpcomingMedicine.time}
+           Scheduled Time: {formatTime12Hour(nextUpcomingMedicine.time)}
           </p>
         </div>
 
@@ -857,14 +868,15 @@ useEffect(() => {
 
 </div>
 
-      {/* Today's schedule */}
+   
+      {/* Today's Schedule */}
       <section className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-slate-800">
               Today's Schedule
             </h2>
-
             <p className="text-sm text-slate-500 mt-1">
               Your upcoming medicine reminders
             </p>
@@ -872,126 +884,229 @@ useEffect(() => {
 
           <CalendarCheck className="text-blue-600" size={25} />
         </div>
-       
 
-       {/* Search and Filter */}
-<div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Search and Filter */}
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <input
+            type="text"
+            placeholder="Search medicine..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
 
-  {/* Search Input */}
-  <input
-    type="text"
-    placeholder="Search medicine..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-  />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
+          >
+            <option value="All">All Medicines</option>
+            <option value="Upcoming">Upcoming</option>
+            <option value="Taken">Taken</option>
+            <option value="Missed">Missed</option>
+          </select>
+        </div>
 
-  {/* Status Filter */}
-  <select
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(e.target.value)}
-    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
-  >
-    <option value="All">All Medicines</option>
-    <option value="Upcoming">Upcoming</option>
-    <option value="Taken">Taken</option>
-    <option value="Missed">Missed</option>
-  </select>
+        {/* Three Schedule Cards */}
+        {visibleMedicines.length === 0 ? (
+          <p className="text-slate-500 py-4">
+            {todaySchedule.length === 0
+              ? "No medicines added yet. Add a medicine to see it here."
+              : "No matching medicines found."}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {[
+              {
+                name: "Morning",
+                emoji: "🌅",
+                timing: "5:00 AM - 12:00 PM",
+                medicines: doseGroups.Morning,
+                color: "bg-amber-50",
+              },
+              {
+                name: "Afternoon",
+                emoji: "☀️",
+                timing: "12:00 PM - 5:00 PM",
+                medicines: doseGroups.Afternoon,
+                color: "bg-orange-50",
+              },
+              {
+                name: "Night",
+                emoji: "🌙",
+                timing: "5:00 PM - 5:00 AM",
+                medicines: doseGroups.Night,
+                color: "bg-purple-50",
+              },
+            ].map((period) => (
+              <div
+                key={period.name}
+                className="rounded-xl border border-slate-200 overflow-hidden"
+              >
+                {/* Card Header */}
+                <div className={`${period.color} p-4`}>
+                  <h3 className="font-bold text-slate-800">
+                    {period.name} {period.emoji}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {period.timing}
+                  </p>
+                </div>
 
-</div>
-
-<div className="space-y-6">
- {visibleMedicines.length === 0 ? (
-    <p className="text-slate-500">
-      {todaySchedule.length === 0
-  ? "No medicines added yet. Add a medicine to see it here."
-  : "No matching medicines found."}
-    </p>
-  ) : (
-    Object.entries(doseGroups)
-      .filter(([, groupMedicines]) => groupMedicines.length > 0)
-      .map(([period, groupMedicines]) => (
-        <div key={period}>
-          <h3 className="mb-3 text-lg font-semibold text-slate-800">
-            {period === "Morning" && "☀️ Morning Doses"}
-            {period === "Afternoon" && "🌤️ Afternoon Doses"}
-            {period === "Night" && "🌙 Night Doses"}
-            {period === "Other" && "💊 Other Doses"}
-          </h3>
-
-          <div className="space-y-3">
-            {groupMedicines.map((medicine, index) => {
-             const status = getMedicineStatus(medicine);
-const isTaken = status === "Taken";
-
-              return (
-                <div
-                  key={medicine.id ?? index}
-                  className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <h4 className="font-semibold text-slate-800">
-                      {medicine.name}
-                    </h4>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      {medicine.dosage}
+                {/* Medicine List */}
+                <div className="p-4">
+                  {period.medicines.length === 0 ? (
+                    <p className="text-sm text-slate-400 py-3">
+                      No medicines scheduled.
                     </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {period.medicines.map((medicine) => {
+                        const status = getMedicineStatus(medicine);
+                        const isTaken = status === "Taken";
 
-                    <p className="mt-1 text-sm text-slate-500">
-                      Time: {medicine.time}
-                    </p>
-                    
-<span
-  className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-    status === "Taken"
-      ? "bg-green-100 text-green-700"
-      : status === "Missed"
-      ? "bg-red-100 text-red-700"
-      : "bg-blue-100 text-blue-700"
-  }`}
->
-  {status === "Taken"
-    ? "✓ Taken"
-    : status === "Missed"
-    ? "✕ Missed"
-    : "● Upcoming"}
-</span>
+                        return (
+                          <div
+                            key={medicine.id}
+                            className="border-b border-slate-100 pb-4 last:border-0 last:pb-0"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <h4 className="font-semibold text-sm text-slate-800">
+                                  {medicine.name}
+                                </h4>
 
-                  </div>
+                                <p className="text-xs text-slate-500 mt-1">
+                                  {medicine.dosage}
+                                </p>
 
-                  <button
-                    type="button"
-                  onClick={() => {
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Time: {medicine.time}
+                                </p>
+                              </div>
+
+                              <Pill
+                                size={18}
+                                className="text-blue-500 shrink-0"
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 mt-3">
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                  status === "Taken"
+                                    ? "bg-green-100 text-green-700"
+                                    : status === "Missed"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-blue-100 text-blue-700"
+                                }`}
+                              >
+                                {status === "Taken"
+                                  ? "✓ Taken"
+                                  : status === "Missed"
+                                  ? "✕ Missed"
+                                  : "● Upcoming"}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => {
   setTakenDoses((previous) =>
-    previous.some(
-      (id) => String(id) === String(medicine.id)
-    )
+    isTaken
       ? previous.filter(
           (id) => String(id) !== String(medicine.id)
         )
       : [...previous, String(medicine.id)]
   );
 }}
-                    className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      isTaken
-                        ? "bg-green-100 text-green-700"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    {isTaken ? "✓ Dose Taken" : "Mark as Taken"}
-                  </button>
+                                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                                  isTaken
+                                    ? "bg-green-100 text-green-700 cursor-default"
+                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                                }`}
+                              >
+                                {isTaken ? "✓ Dose Taken" : "Mark as Taken"}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Other Medicines - if any */}
+        {doseGroups.Other.length > 0 && (
+          <div className="mt-4 rounded-xl border border-slate-200 p-4">
+            <h3 className="font-bold text-slate-800 mb-3">
+              💊 Other Medicines
+            </h3>
+
+            <div className="space-y-3">
+              {doseGroups.Other.map((medicine) => {
+                const status = getMedicineStatus(medicine);
+
+                return (
+                  <div
+                    key={medicine.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0"
+                  >
+                    <div>
+                      <h4 className="font-semibold text-slate-800">
+                        {medicine.name}
+                      </h4>
+                      <p className="text-sm text-slate-500">
+                        {medicine.dosage} • {medicine.time}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                    onClick={() => {
+  setTakenDoses((previous) =>
+    status === "Taken"
+      ? previous.filter(
+          (id) => String(id) !== String(medicine.id)
+        )
+      : [...previous, String(medicine.id)]
+  );
+}}
+                      className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                        status === "Taken"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      {status === "Taken" ? "✓ Dose Taken" : "Mark as Taken"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 flex items-center gap-3">
+          <div className="bg-white rounded-full p-2">
+            <CheckCircle2 className="text-blue-600" size={25} />
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-blue-700">
+              Small steps every day make a big difference!
+            </h3>
+            <p className="text-sm text-blue-500 mt-1">
+              You're doing great. Keep it up!
+            </p>
           </div>
         </div>
-      ))
-  )}
-</div>
-
-
       </section>
+
     </div>
   );
 }

@@ -1,24 +1,28 @@
-
 import { useState, useEffect } from "react";
 import { Pill, Plus, Search, X, Trash2, Pencil } from "lucide-react";
-function Medicines() {
 
-  const [medicines, setMedicines] = useState(() => {
+function Medicines() {
+const [medicines, setMedicines] = useState(() => {
   const savedMedicines = localStorage.getItem("medicines");
 
   return savedMedicines ? JSON.parse(savedMedicines) : [];
 });
-
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
 
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
     time: "",
   });
-    
+
+  const [timeParts, setTimeParts] = useState({
+  hour: "",
+  minute: "",
+  period: "AM",
+});
   useEffect(() => {
   localStorage.setItem("medicines", JSON.stringify(medicines));
 }, [medicines]);
@@ -32,15 +36,37 @@ function Medicines() {
     }));
   }
 
-  
+
 function handleSubmit(e) {
   e.preventDefault();
 
-  const medicineData = {
-    name: formData.name.trim(),
-    dosage: formData.dosage.trim(),
-    time: formData.time,
-  };
+ const hour = Number(timeParts.hour);
+const minute = Number(timeParts.minute);
+
+if (!timeParts.hour || !timeParts.minute) {
+  alert("Please select reminder time.");
+  return;
+}
+
+let hour24 = hour;
+
+if (timeParts.period === "PM" && hour !== 12) {
+  hour24 = hour + 12;
+}
+
+if (timeParts.period === "AM" && hour === 12) {
+  hour24 = 0;
+}
+
+const formattedTime =
+  `${String(hour24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+
+const medicineData = {
+  name: formData.name.trim(),
+  dosage: formData.dosage.trim(),
+  time: formattedTime,
+};
+
 
   if (editingId !== null) {
     // Existing medicine update hogi
@@ -68,12 +94,17 @@ function handleSubmit(e) {
     time: "",
   });
 
+  setTimeParts({
+  hour: "",
+  minute: "",
+  period: "AM",
+});
+
   setEditingId(null);
   setShowForm(false);
 }
 
 
-  
 
 function handleDelete(id) {
   const confirmDelete = window.confirm(
@@ -87,13 +118,22 @@ function handleDelete(id) {
   }
 }
 
-
-
 function handleEdit(medicine) {
+  const [hours, minutes] = medicine.time.split(":").map(Number);
+
+  const period = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+
   setFormData({
     name: medicine.name,
     dosage: medicine.dosage,
     time: medicine.time,
+  });
+
+  setTimeParts({
+    hour: String(hour12),
+    minute: String(minutes).padStart(2, "0"),
+    period: period,
   });
 
   setEditingId(medicine.id);
@@ -101,9 +141,8 @@ function handleEdit(medicine) {
 }
 
 
-
   const filteredMedicines = medicines.filter((medicine) =>
-    medicine.name.toLowerCase().includes(search.toLowerCase())
+    medicine.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -111,9 +150,7 @@ function handleEdit(medicine) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">
-            My Medicines
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-800">My Medicines</h1>
           <p className="text-slate-500 mt-2">
             Manage your medicines and daily schedule.
           </p>
@@ -176,27 +213,83 @@ function handleEdit(medicine) {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Reminder Time
-              </label>
-              <input
-                type="time"
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                required
-                className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:border-blue-500"
-              />
-            </div>
+           <div>
+  <label className="block text-sm font-medium text-slate-700 mb-2">
+    Reminder Time
+  </label>
+
+  <div className="grid grid-cols-3 gap-3">
+
+    {/* Hour */}
+    <select
+      value={timeParts.hour}
+      onChange={(e) =>
+        setTimeParts((prev) => ({
+          ...prev,
+          hour: e.target.value,
+        }))
+      }
+      required
+      className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:border-blue-500 bg-white"
+    >
+      <option value="">Hour</option>
+
+      {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => (
+        <option key={hour} value={String(hour)}>
+          {String(hour).padStart(2, "0")}
+        </option>
+      ))}
+    </select>
+
+    {/* Minutes */}
+    <select
+      value={timeParts.minute}
+      onChange={(e) =>
+        setTimeParts((prev) => ({
+          ...prev,
+          minute: e.target.value,
+        }))
+      }
+      required
+      className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:border-blue-500 bg-white"
+    >
+      <option value="">Minute</option>
+
+      {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
+        <option
+          key={minute}
+          value={String(minute).padStart(2, "0")}
+        >
+          {String(minute).padStart(2, "0")}
+        </option>
+      ))}
+    </select>
+
+    {/* AM / PM */}
+    <select
+      value={timeParts.period}
+      onChange={(e) =>
+        setTimeParts((prev) => ({
+          ...prev,
+          period: e.target.value,
+        }))
+      }
+      className="w-full border border-slate-200 rounded-xl p-3 outline-none focus:border-blue-500 bg-white"
+    >
+      <option value="AM">AM</option>
+      <option value="PM">PM</option>
+    </select>
+
+  </div>
+</div>
 
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
                 className="bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700"
               >
-              {editingId !== null ? "Update Medicine" : "Save Medicine"}
-              </button>
+             {editingId !== null ? "Update Medicine" : "Save Medicine"}         
+                  </button>
 
               <button
                 type="button"
@@ -250,7 +343,6 @@ function handleEdit(medicine) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredMedicines.map((medicine) => (
-
             <div
               key={medicine.id}
               className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm"
@@ -264,9 +356,7 @@ function handleEdit(medicine) {
                   <h3 className="font-semibold text-slate-800">
                     {medicine.name}
                   </h3>
-                  <p className="text-sm text-slate-500">
-                    {medicine.dosage}
-                  </p>
+                  <p className="text-sm text-slate-500">{medicine.dosage}</p>
                 </div>
               </div>
 
@@ -274,8 +364,9 @@ function handleEdit(medicine) {
                 Reminder: {medicine.time}
               </p>
 
-              
 
+              {/* Delete button */}
+              
 <div className="flex justify-end gap-2 mt-4">
   <button
     type="button"
@@ -295,7 +386,6 @@ function handleEdit(medicine) {
     Delete
   </button>
 </div>
-
 
             </div>
           ))}

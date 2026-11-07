@@ -20,6 +20,17 @@ function getDateString(date) {
   return `${year}-${month}-${day}`;
 }
 
+function formatTime12Hour(time) {
+  if (!time || time === "-") return "-";
+
+  const [hours, minutes] = time.split(":").map(Number);
+
+  const period = hours >= 12 ? "PM" : "AM";
+  const formattedHours = hours % 12 || 12;
+
+  return `${String(formattedHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
+}
+
 function History() {
   const [medicines, setMedicines] = useState([]);
   const [doseHistory, setDoseHistory] = useState({});
@@ -214,7 +225,7 @@ const downloadHistoryPDF = () => {
         day.date,
         medicine.name || "-",
         medicine.dosage || "-",
-        medicine.time || "-",
+       formatTime12Hour(medicine.time),
         medicine.status,
       ])
     ),
@@ -503,7 +514,7 @@ const downloadHistoryPDF = () => {
                         </p>
 
                         <p className="text-xs text-gray-400 mt-1">
-                          Time: {medicine.time}
+                         Time: {formatTime12Hour(medicine.time)}
                         </p>
                       </div>
                     </div>
