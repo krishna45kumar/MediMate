@@ -1,7 +1,15 @@
 
+import { useEffect } from "react";
 import Sidebar from "./Sidebar";
 
 function DashboardLayout({ children }) {
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("medimateTheme") || "Light";
+
+    document.documentElement.dataset.theme =
+      savedTheme.toLowerCase();
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />

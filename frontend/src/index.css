@@ -1,1 +1,74 @@
+
 @import "tailwindcss";
+
+/* Dark Mode */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Main backgrounds */
+:root[data-theme="dark"] .bg-slate-50 {
+  background-color: #0f172a;
+}
+
+:root[data-theme="dark"] .bg-white {
+  background-color: #1e293b;
+}
+
+/* Other backgrounds */
+:root[data-theme="dark"] .bg-slate-100 {
+  background-color: #334155;
+}
+
+:root[data-theme="dark"] .bg-blue-50 {
+  background-color: #172554;
+}
+
+:root[data-theme="dark"] .bg-green-50 {
+  background-color: #052e16;
+}
+
+:root[data-theme="dark"] .bg-red-50 {
+  background-color: #450a0a;
+}
+
+:root[data-theme="dark"] .bg-purple-50 {
+  background-color: #3b0764;
+}
+
+/* Text colors */
+:root[data-theme="dark"] .text-slate-800,
+:root[data-theme="dark"] .text-slate-700 {
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .text-slate-600,
+:root[data-theme="dark"] .text-slate-500 {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .text-slate-400 {
+  color: #94a3b8;
+}
+
+/* Borders */
+:root[data-theme="dark"] [class*="border-slate-"],
+:root[data-theme="dark"] [class*="border-blue-"],
+:root[data-theme="dark"] [class*="border-green-"],
+:root[data-theme="dark"] [class*="border-red-"] {
+  border-color: #475569;
+}
+
+/* Inputs and dropdowns */
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background-color: #334155;
+  color: #f8fafc;
+  border-color: #475569;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8;
+}
