@@ -8,6 +8,7 @@ import WeeklyReport from "./pages/WeeklyReport";
 import DashboardLayout from "./components/DashboardLayout";
 import Schedule from "./pages/Schedule";
 import History from "./pages/History";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -54,6 +55,14 @@ function App() {
   element={
     <DashboardLayout>
       <History />
+    </DashboardLayout>
+  }
+/>
+<Route
+  path="/settings"
+  element={
+    <DashboardLayout>
+      <Settings />
     </DashboardLayout>
   }
 />

@@ -101,13 +101,19 @@ function Sidebar() {
             {/* Bottom menu */}
             <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col gap-2">
 
-                <button
-                    type="button"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50"
-                >
-                    <Settings size={20} />
-                    <span>Settings</span>
-                </button>
+               <NavLink
+  to="/settings"
+  className={({ isActive }) =>
+    `flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+      isActive
+        ? "bg-blue-50 text-blue-600 font-semibold"
+        : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+    }`
+  }
+>
+  <Settings size={20} />
+  <span>Settings</span>
+</NavLink>
 
                 <button
                     type="button"

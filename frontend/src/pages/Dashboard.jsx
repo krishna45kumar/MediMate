@@ -172,8 +172,17 @@ useEffect(() => {
 useEffect(() => {
   let intervalId;
   let isActive = true;
+async function startReminders() {
 
-  async function startReminders() {
+    // Check Notification Setting
+    const notificationsEnabled =
+      localStorage.getItem("medicineNotificationsEnabled") !== "false";
+
+    if (!notificationsEnabled) {
+      console.log("Medicine notifications are disabled in Settings.");
+      return;
+    }
+
     if (!("Notification" in window)) {
       console.log("Browser notifications are not supported.");
       return;

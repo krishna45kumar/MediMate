@@ -20,6 +20,7 @@ function getDateString(date) {
   return `${year}-${month}-${day}`;
 }
 
+
 function getDosePeriod(time) {
   const hour = Number(String(time || "00:00").split(":")[0]);
 
@@ -100,36 +101,52 @@ const [medicineFilter, setMedicineFilter] = useState("All");
     setSelectedDate(getDateString(date));
   }
 
-  function markAsTaken(medicine) {
-    const today = getDateString(new Date());
+ 
+function markAsTaken(medicine) {
+  const today = getDateString(new Date());
 
-    // Sirf aaj ki date par status update hoga
-    if (selectedDate !== today) return;
+  if (selectedDate !== today) return;
 
-    const medicineId = String(medicine.id);
-    const todayDoses = doseHistory[today] || [];
+  const medicineId = String(medicine.id);
 
-    if (todayDoses.includes(medicineId)) return;
+  let latestHistory = {};
 
-    const updatedHistory = {
-      ...doseHistory,
-      [today]: [...todayDoses, medicineId],
-    };
-
-    setDoseHistory(updatedHistory);
-
-    localStorage.setItem(
-      "medicineDoseHistory",
-      JSON.stringify(updatedHistory)
+  try {
+    latestHistory = JSON.parse(
+      localStorage.getItem("medicineDoseHistory") || "{}"
     );
-
-    // Dashboard ke purane code ke saath compatibility
-    localStorage.setItem(
-      "takenDoses",
-      JSON.stringify(updatedHistory[today])
-    );
-    localStorage.setItem("doseTrackingDate", today);
+  } catch {
+    latestHistory = {};
   }
+
+  const todayDoses = (latestHistory[today] || []).map(String);
+
+  const updatedTodayDoses = todayDoses.includes(medicineId)
+    ? todayDoses.filter((id) => id !== medicineId)
+    : [...todayDoses, medicineId];
+
+  const updatedHistory = {
+    ...latestHistory,
+    [today]: updatedTodayDoses,
+  };
+
+  setDoseHistory(updatedHistory);
+
+  localStorage.setItem(
+    "medicineDoseHistory",
+    JSON.stringify(updatedHistory)
+  );
+
+  localStorage.setItem(
+    "takenDoses",
+    JSON.stringify(updatedTodayDoses)
+  );
+
+  localStorage.setItem("doseTrackingDate", today);
+
+  window.dispatchEvent(new Event("doseHistoryUpdated"));
+}
+
 
   function getMedicineStatus(medicine) {
     const today = getDateString(new Date());
@@ -756,158 +773,153 @@ const monthlyProgress =
 
 
 
-  {/* Medicine Status Filter */}
-<div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+{/* Medicine Sections */}
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+  {periods.map((period) => {
+    const Icon = period.icon;
 
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    const periodMedicines = medicines
+      .filter((medicine) => {
+        const matchesPeriod =
+          getDosePeriod(medicine.time) === period.name;
 
-    <div>
-      <h2 className="font-bold text-gray-800">
-        Filter Medicines
-      </h2>
+        const status = getMedicineStatus(medicine);
 
-      <p className="text-sm text-gray-500 mt-1">
-        Select medicine status
-      </p>
-    </div>
+        const matchesStatus =
+          medicineFilter === "All" ||
+          status === medicineFilter;
 
-    <div className="flex flex-wrap gap-2">
+        return matchesPeriod && matchesStatus;
+      })
+      .sort((a, b) =>
+        (a.time || "").localeCompare(b.time || "")
+      );
 
-      {["All", "Taken", "Missed", "Upcoming"].map(
-        (filter) => (
-          <button
-            key={filter}
-            onClick={() => setMedicineFilter(filter)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-              medicineFilter === filter
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {filter}
-          </button>
-        )
-      )}
+    const headerStyle =
+      period.name === "Morning"
+        ? "bg-amber-50"
+        : period.name === "Afternoon"
+        ? "bg-orange-50"
+        : "bg-purple-50";
 
-    </div>
+    return (
+      <div
+        key={period.name}
+        className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"
+      >
+        {/* Period Header */}
+        <div className={`px-5 py-5 ${headerStyle}`}>
+          <div className="flex items-center gap-3">
+            <Icon
+              className="text-blue-600 shrink-0"
+              size={26}
+            />
 
-  </div>
-
-</div>
-
-      {/* Medicine Sections */}
-      {periods.map((period) => {
-        const Icon = period.icon;
-const periodMedicines = medicines
-  .filter((medicine) => {
-    const matchesPeriod =
-      getDosePeriod(medicine.time) === period.name;
-
-    const status = getMedicineStatus(medicine);
-
-    const matchesStatus =
-      medicineFilter === "All" ||
-      status === medicineFilter;
-
-    return matchesPeriod && matchesStatus;
-  })
-  .sort((a, b) =>
-    (a.time || "").localeCompare(b.time || "")
-  );
-
-
-        return (
-          <div
-            key={period.name}
-            className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Icon className="text-blue-600" size={22} />
-              </div>
-
-              <h2 className="font-semibold text-lg text-gray-800">
+            <div>
+              <h2 className="font-bold text-gray-800 text-lg">
                 {period.name}
               </h2>
 
-              <span className="text-sm text-gray-400">
-                ({periodMedicines.length} medicines)
-              </span>
+              <p className="text-sm text-gray-500 mt-1">
+                {period.name === "Morning"
+                  ? "5:00 AM - 12:00 PM"
+                  : period.name === "Afternoon"
+                  ? "12:00 PM - 5:00 PM"
+                  : "5:00 PM - 5:00 AM"}
+              </p>
             </div>
 
-            {periodMedicines.length === 0 ? (
-              <p className="text-gray-400 text-sm">
-                No medicines scheduled.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {periodMedicines.map((medicine) => {
-                  const status = getMedicineStatus(medicine);
-
-                  return (
-                    <div
-                      key={medicine.id}
-                      className="border border-gray-100 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-3 bg-gray-50 rounded-xl">
-                          <Pill className="text-blue-600" size={22} />
-                        </div>
-
-                        <div>
-                          <h3 className="font-semibold text-gray-800">
-                            {medicine.name}
-                          </h3>
-
-                          <p className="text-sm text-gray-500">
-                            {medicine.dosage}
-                          </p>
-
-                          <p className="text-sm text-gray-400 flex items-center gap-1 mt-1">
-                            <Clock size={14} />
-                            {medicine.time}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                            status === "Taken"
-                              ? "bg-green-100 text-green-700"
-                              : status === "Missed"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}
-                        >
-                          {status}
-                        </span>
-
-                        {status !== "Taken" &&
-                          selectedDate === getDateString(new Date()) && (
-                            <button
-                              onClick={() => markAsTaken(medicine)}
-                              className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700"
-                            >
-                              Mark as Taken
-                            </button>
-                          )}
-
-                        {status === "Taken" && (
-                          <CheckCircle2
-                            className="text-green-600"
-                            size={22}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <span className="ml-auto text-sm text-gray-500 whitespace-nowrap">
+              {periodMedicines.length} medicines
+            </span>
           </div>
-        );
-      })}
+        </div>
+
+        {/* Medicine List */}
+        <div className="px-5 py-2">
+          {periodMedicines.length === 0 ? (
+            <p className="text-sm text-gray-400 py-6 text-center">
+              No medicines scheduled.
+            </p>
+          ) : (
+            <div>
+              {periodMedicines.map((medicine) => {
+                const status = getMedicineStatus(medicine);
+
+                return (
+                  <div
+                    key={medicine.id}
+                    className="py-5 border-b border-gray-100 last:border-0"
+                  >
+                    {/* Medicine Name and Edit */}
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-semibold text-gray-800 truncate">
+                        {medicine.name}
+                      </h3>
+
+                      <Pill
+                        className="text-blue-500 shrink-0"
+                        size={22}
+                      />
+                    </div>
+
+                    {/* Dosage */}
+                    <p className="text-sm text-gray-500 mt-1">
+                      {medicine.dosage}
+                    </p>
+
+                    {/* Time */}
+                    <p className="text-sm text-gray-400 mt-2">
+                      Time: {medicine.time}
+                    </p>
+
+                    {/* Status and Action Button */}
+                    <div className="flex items-center justify-between gap-2 mt-4">
+                      <span
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap ${
+                          status === "Taken"
+                            ? "bg-green-100 text-green-700"
+                            : status === "Missed"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {status === "Taken"
+                          ? "✓ Taken"
+                          : status === "Upcoming"
+                          ? "● Upcoming"
+                          : status}
+                      </span>
+
+                      
+{selectedDate === getDateString(new Date()) && (
+  <button
+    type="button"
+    onClick={() => markAsTaken(medicine)}
+    className={`px-3 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+      status === "Taken"
+        ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+        : "bg-blue-600 text-white hover:bg-blue-700"
+    }`}
+  >
+    {status === "Taken" ? "↩ Undo" : "Mark as Taken"}
+  </button>
+)}
+
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  })}
+</div>
+
+
+
 
       {medicines.length === 0 && (
         <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
