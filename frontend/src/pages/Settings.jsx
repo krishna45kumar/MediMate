@@ -40,10 +40,69 @@ function Settings() {
     }
   }, []);
 
-  function saveProfile() {
-    localStorage.setItem("userProfile", JSON.stringify(profile));
-    alert("Profile saved successfully!");
+
+function saveProfile() {
+  const updatedProfile = {
+    name: profile.name.trim(),
+    email: profile.email.trim().toLowerCase(),
+  };
+
+  if (!updatedProfile.name || !updatedProfile.email) {
+    alert("Please enter your name and email.");
+    return;
   }
+
+  try {
+    const loggedInUserId = localStorage.getItem("loggedInUser");
+
+    const users = JSON.parse(
+      localStorage.getItem("medimateUsers") || "[]"
+    );
+
+    const currentUserIndex = users.findIndex(
+      (user) => String(user.id) === String(loggedInUserId)
+    );
+
+    if (currentUserIndex === -1) {
+      alert("User account not found. Please login again.");
+      return;
+    }
+
+    const emailAlreadyExists = users.some(
+      (user, index) =>
+        index !== currentUserIndex &&
+        user.email.toLowerCase() === updatedProfile.email
+    );
+
+    if (emailAlreadyExists) {
+      alert("This email is already used by another account.");
+      return;
+    }
+
+    // Update registered account
+    users[currentUserIndex] = {
+      ...users[currentUserIndex],
+      name: updatedProfile.name,
+      email: updatedProfile.email,
+    };
+
+    localStorage.setItem("medimateUsers", JSON.stringify(users));
+
+    // Update currently logged-in profile
+    localStorage.setItem(
+      "userProfile",
+      JSON.stringify(updatedProfile)
+    );
+
+    setProfile(updatedProfile);
+
+    alert("Profile updated successfully!");
+  } catch (error) {
+    console.error("Profile update error:", error);
+    alert("Unable to update profile.");
+  }
+}
+
 
   function toggleNotifications() {
     const updatedValue = !notifications;
@@ -238,9 +297,6 @@ function Settings() {
           </button>
         </div>
 
-        <p className="text-xs text-slate-400 mt-3">
-          Theme preference is saved. App-wide dark styling will be connected separately.
-        </p>
       </div>
 
       {/* Data Management */}

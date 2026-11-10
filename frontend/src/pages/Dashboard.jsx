@@ -64,8 +64,41 @@ function getDosePeriod(time) {
 
 function Dashboard() {
 
-  const [medicines, setMedicines] = useState([]);
+  const [userName, setUserName] = useState(() => {
+  try {
+    const profile = JSON.parse(
+      localStorage.getItem("userProfile") || "{}"
+    );
+
+    return profile.name || "User";
+  } catch {
+    return "User";
+  }
+});
+
+
+const [medicines, setMedicines] = useState([]);
 const [todayDate, setTodayDate] = useState(getTodayDate);
+
+useEffect(() => {
+  function updateUserProfile() {
+    try {
+      const profile = JSON.parse(
+        localStorage.getItem("userProfile") || "{}"
+      );
+
+      setUserName(profile.name || "User");
+    } catch {
+      setUserName("User");
+    }
+  }
+
+  window.addEventListener("focus", updateUserProfile);
+
+  return () => {
+    window.removeEventListener("focus", updateUserProfile);
+  };
+}, []);
 
 
 // Search medicine
@@ -631,9 +664,9 @@ useEffect(() => {
 })}
         </p>
 
-        <h1 className="text-3xl font-bold text-slate-800 mt-2">
-          Welcome back! 👋
-        </h1>
+     <h1 className="text-3xl font-bold text-slate-800 mt-2">
+  Welcome back, {userName}! 👋
+</h1>
 
         <p className="text-slate-500 mt-2">
           Let's keep your health on track today.
