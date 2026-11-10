@@ -1,191 +1,159 @@
-import { Mail, Lock, Eye, Pill } from "lucide-react";
+
+import { useState } from "react";
+import { Mail, Lock, Eye, EyeOff, Pill } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import illustration from "../assets/medimate-login-illustration.png";
 
 function Login() {
-    return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+  const navigate = useNavigate();
 
-            <div className="w-full max-w-5xl bg-white rounded-3xl shadow-xl overflow-hidden">
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-                <div className="grid md:grid-cols-2">
+  function handleLogin(e) {
+    e.preventDefault();
 
-                    {/* LEFT SIDE */}
-                    <div className="hidden md:flex bg-blue-50 p-12 items-center flex-col justify-between">
-                        <div>
+    if (!email.trim() || !password) {
+      alert("Please enter email and password.");
+      return;
+    }
 
-                            {/* Logo */}
-                            <div className="flex items-center gap-3">
+    const users = JSON.parse(localStorage.getItem("medimateUsers") || "[]");
 
-                                <div className="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center">
-                                    <Pill
-                                        size={30}
-                                        className="text-white"
-                                    />
-                                </div>
+    const loggedInUser = users.find(
+      (user) =>
+        user.email === email.trim().toLowerCase() &&
+        user.password === password
+    );
 
-                                <div>
-                                    <h1 className="text-xl font-bold text-slate-800">
-                                        Medi <span className="text-blue-600">Mate</span>
-                                    </h1>
+    if (!loggedInUser) {
+      alert("Invalid email or password.");
+      return;
+    }
 
-                                    <p className="text-xs text-slate-500">
-                                        Your Health, Our Priority
-                                    </p>
-                                </div>
+    localStorage.setItem(
+      "userProfile",
+      JSON.stringify({
+        name: loggedInUser.name,
+        email: loggedInUser.email,
+      })
+    );
 
-                            </div>
+    localStorage.setItem("loggedInUser", loggedInUser.id);
 
-                        </div>
+    if (rememberMe) {
+      localStorage.setItem("rememberMe", "true");
+    } else {
+      localStorage.removeItem("rememberMe");
+    }
 
+    alert("Login successful!");
+    navigate("/dashboard");
+  }
 
-                        {/* Illustration */}
-                        <div className="flex justify-center py-10">
-                            <img
-                                src={illustration}
-                                alt="Medicine reminder illustration"
-                                className="w-70 h-55 object-contain"
-                            />
-                        </div>
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-lg overflow-hidden grid md:grid-cols-2">
 
+        <div className="hidden md:flex items-center justify-center bg-blue-50 p-8">
+          <img
+            src={illustration}
+            alt="MediMate medicine reminder"
+            className="w-full max-w-md"
+          />
+        </div>
 
-                        {/* Text */}
-                        <div>
+        <div className="p-8 md:p-12 flex flex-col justify-center">
+          <div className="flex items-center gap-2 mb-8">
+            <Pill className="text-blue-600" size={30} />
+            <h1 className="text-3xl font-bold text-slate-800">MediMate</h1>
+          </div>
 
-                            <h2 className="text-2xl font-bold text-slate-800 mb-3">
-                                Stay on track with your medicines
-                            </h2>
+          <h2 className="text-3xl font-bold text-slate-800">
+            Welcome Back!
+          </h2>
+          <p className="text-slate-500 mt-2 mb-8">
+            Login to manage your daily medicines.
+          </p>
 
-                            <p className="text-slate-500 leading-relaxed">
-                                Get reminders, manage your medicines and
-                                keep track of your daily health routine —
-                                all in one place.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    {/* RIGHT SIDE */}
-                    <div className="p-8 md:p-12">
-
-                        {/* Heading */}
-                        <div className="mb-8">
-
-                            <h2 className="text-3xl font-bold text-slate-800">
-                                Welcome Back 👋
-                            </h2>
-
-                            <p className="text-slate-500 mt-2">
-                                Login to your account
-                            </p>
-
-                        </div>
-
-
-                        {/* Email */}
-                        <div className="mb-5">
-
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Email Address
-                            </label>
-
-                            <div className="relative">
-
-                                <Mail
-                                    size={19}
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                                />
-
-                                <input
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    className="w-full border border-slate-200 rounded-xl py-3.5 pl-11 pr-4 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition"
-                                />
-
-                            </div>
-
-                        </div>
-
-
-                        {/* Password */}
-                        <div className="mb-4">
-
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Password
-                            </label>
-
-                            <div className="relative">
-
-                                <Lock
-                                    size={19}
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                                />
-
-                                <input
-                                    type="password"
-                                    placeholder="Enter your password"
-                                    className="w-full border border-slate-200 rounded-xl py-3.5 pl-11 pr-12 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition"
-                                />
-
-                                <Eye
-                                    size={19}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
-                                />
-
-                            </div>
-
-                        </div>
-
-
-                        {/* Remember + Forgot */}
-                        <div className="flex items-center justify-between mb-7">
-
-                            <label className="flex items-center gap-2 text-sm text-slate-500">
-
-                                <input
-                                    type="checkbox"
-                                    className="w-4 h-4 accent-blue-600"
-                                />
-
-                                Remember me
-
-                            </label>
-
-                            <button className="text-sm text-blue-600 font-medium hover:text-blue-700">
-                                Forgot password?
-                            </button>
-
-                        </div>
-
-
-                        {/* Login Button */}
-                        <button
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition shadow-lg shadow-blue-100"
-                        >
-                            Login
-                        </button>
-
-
-                        {/* Register */}
-                        <p className="text-center text-sm text-slate-500 mt-6">
-
-                            Don't have an account?
-
-                            <button className="text-blue-600 font-semibold ml-1 hover:underline">
-                                Register
-                            </button>
-
-                        </p>
-
-                    </div>
-
-                </div>
-
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 text-slate-400" size={20} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="w-full border border-slate-300 rounded-lg py-3 pl-10 pr-3 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 text-slate-400" size={20} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full border border-slate-300 rounded-lg py-3 pl-10 pr-12 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-slate-400"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                Remember me
+              </label>
+              <button
+                type="button"
+                onClick={() => alert("Please contact support to reset your password.")}
+                className="text-sm text-blue-600 font-medium"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
+            >
+              Login
+            </button>
+          </form>
+
+          <p className="text-center text-slate-600 mt-7">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-blue-600 font-semibold">
+              Register
+            </Link>
+          </p>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
 
 export default Login;
