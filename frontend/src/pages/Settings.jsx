@@ -8,6 +8,8 @@ import {
   Save,
   Moon,
   Sun,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 function Settings() {
@@ -18,6 +20,15 @@ function Settings() {
 
   const [notifications, setNotifications] = useState(true);
   const [theme, setTheme] = useState("Light");
+
+  // Change Password States
+const [currentPassword, setCurrentPassword] = useState("");
+const [newPassword, setNewPassword] = useState("");
+const [confirmPassword, setConfirmPassword] = useState("");
+
+const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+const [showNewPassword, setShowNewPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     try {
@@ -100,6 +111,59 @@ function saveProfile() {
   } catch (error) {
     console.error("Profile update error:", error);
     alert("Unable to update profile.");
+  }
+}
+
+
+function changePassword() {
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    alert("Please fill all password fields.");
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    alert("New password must be at least 6 characters.");
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    alert("New password and confirm password do not match.");
+    return;
+  }
+
+  try {
+    const loggedInUserId = localStorage.getItem("loggedInUser");
+
+    const users = JSON.parse(
+      localStorage.getItem("medimateUsers") || "[]"
+    );
+
+    const userIndex = users.findIndex(
+      (user) => String(user.id) === String(loggedInUserId)
+    );
+
+    if (userIndex === -1) {
+      alert("User account not found. Please login again.");
+      return;
+    }
+
+    if (users[userIndex].password !== currentPassword) {
+      alert("Current password is incorrect.");
+      return;
+    }
+
+    users[userIndex].password = newPassword;
+
+    localStorage.setItem("medimateUsers", JSON.stringify(users));
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+
+    alert("Password changed successfully!");
+  } catch (error) {
+    console.error("Password update error:", error);
+    alert("Unable to change password.");
   }
 }
 
@@ -216,6 +280,107 @@ function saveProfile() {
           Save Profile
         </button>
       </div>
+
+
+
+      {/* Change Password */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="font-bold text-slate-800">
+            Change Password
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Update your account password securely.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-2">
+              Current Password
+            </label>
+           
+<div className="relative">
+  <input
+    type={showCurrentPassword ? "text" : "password"}
+    value={currentPassword}
+    onChange={(e) => setCurrentPassword(e.target.value)}
+    placeholder="Enter current password"
+    className="w-full border border-slate-200 rounded-xl px-4 py-3 pr-12 outline-none focus:border-blue-500"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-600"
+  >
+    {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+  </button>
+</div>
+
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-2">
+              New Password
+            </label>
+            
+<div className="relative">
+  <input
+    type={showNewPassword ? "text" : "password"}
+    value={newPassword}
+    onChange={(e) => setNewPassword(e.target.value)}
+    placeholder="Enter new password"
+    className="w-full border border-slate-200 rounded-xl px-4 py-3 pr-12 outline-none focus:border-blue-500"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowNewPassword(!showNewPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-600"
+  >
+    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+  </button>
+</div>
+
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-2">
+              Confirm New Password
+            </label>
+           
+<div className="relative">
+  <input
+    type={showConfirmPassword ? "text" : "password"}
+    value={confirmPassword}
+    onChange={(e) => setConfirmPassword(e.target.value)}
+    placeholder="Confirm new password"
+    className="w-full border border-slate-200 rounded-xl px-4 py-3 pr-12 outline-none focus:border-blue-500"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-600"
+  >
+    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+  </button>
+</div>
+
+          </div>
+        </div>
+
+        <button
+          onClick={changePassword}
+          className="mt-5 bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700"
+        >
+          Update Password
+        </button>
+      </div>
+
+
+
 
       {/* Notification Settings */}
       <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
